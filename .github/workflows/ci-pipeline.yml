@@ -136,7 +136,8 @@ jobs:
           helm upgrade --install \
             ${{ env.RELEASE_NAME }} \
             ./cycle-tracker \
-            --namespace ${{ env.NAMESPACE }} \
+            --namespace cycle-tracker \
+            --create-namespace \
             --set image.repository=ghcr.io/${{ github.repository }} \
             --set image.tag=$IMAGE_TAG \
             --wait

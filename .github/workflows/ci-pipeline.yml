@@ -55,7 +55,7 @@ jobs:
         run: uv run pytest
 
   build_and_push_backend_image:
-    runs-on: ubuntu-latest
+    runs-on: github-runner-homelab
     needs: python_lint_test
     outputs:
       image_tag: ${{ steps.set_tag.outputs.image_tag }}

@@ -3,20 +3,23 @@
 
     <div v-if="!isMobile"
          :class="[
-            'h-screen flex flex-col flex-shrink-0 bg-white border-r border-gray-100 transition-width duration-300 ease-in-out',
+            'h-screen flex flex-col flex-shrink-0 bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-700 transition-width duration-300 ease-in-out',
             sidebarOpen ? 'w-60' : 'w-20'
          ]">
-      <div class="flex-shrink-0 flex items-center h-16 border-b border-gray-100 px-4" :class="[sidebarOpen ? 'justify-between' : 'justify-center']">
+      <div class="flex-shrink-0 flex items-center h-16 border-b border-gray-100 dark:border-gray-700 px-4" :class="[sidebarOpen ? 'justify-between' : 'justify-center']">
          <span v-if="sidebarOpen">
           <router-link :to="{ name: 'dashboard' }" class="text-l flex gap-2 items-center font-bold text-primary">
             <img src="/assets/icons/180_tp.png" alt="Period Tracker" class="nav-image">
             {{ $t('common.title')}}
           </router-link>
          </span>
-        <button @click="toggleSidebar" class="p-2 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary">
-          <ChevronDoubleLeftIcon v-if="sidebarOpen" class="h-5 w-5 text-gray-600" />
-          <ChevronDoubleRightIcon v-else class="h-5 w-5 text-gray-600" />
-        </button>
+        <div class="flex items-center gap-1">
+          <ThemeToggle />
+          <button @click="toggleSidebar" class="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary">
+            <ChevronDoubleLeftIcon v-if="sidebarOpen" class="h-5 w-5 text-gray-600 dark:text-gray-300" />
+            <ChevronDoubleRightIcon v-else class="h-5 w-5 text-gray-600 dark:text-gray-300" />
+          </button>
+        </div>
       </div>
 
       <nav class="flex-1 flex flex-col mt-4 px-2 space-y-2 overflow-y-auto pb-4">
@@ -32,7 +35,7 @@
               @click="navigate"
               :class="[
                     'flex items-center px-4 py-2.5 rounded-lg transition-colors duration-150 group',
-                    isActive ? 'bg-primary-50 text-primary font-medium' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
+                    isActive ? 'bg-primary-50 dark:bg-gray-700 text-primary dark:text-primary font-medium' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100',
                     sidebarOpen ? 'justify-start' : 'justify-center'
                 ]"
               :title="sidebarOpen ? '' : item.name"
@@ -44,7 +47,7 @@
       </nav>
     </div>
 
-    <nav v-else class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex justify-around py-2 shadow-[0_-2px_10px_-3px_rgba(0,0,0,0.05)] z-50">
+    <nav v-else class="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 flex justify-around py-2 shadow-[0_-2px_10px_-3px_rgba(0,0,0,0.05)] dark:shadow-[0_-2px_10px_-3px_rgba(0,0,0,0.3)] z-50">
       <RouterLink
           v-for="item in navigationItems"
           :key="item.name"
@@ -57,7 +60,7 @@
             @click="navigate"
             :class="[
                 'flex flex-col items-center text-xs px-2 py-1 rounded-md w-16',
-                isActive ? 'text-primary font-medium' : 'text-gray-500 hover:text-gray-700'
+                isActive ? 'text-primary font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
             ]"
         >
           <component :is="item.icon" :class="['h-5 w-5 mb-0.5']" aria-hidden="true" />
@@ -78,6 +81,7 @@ import {
   ChevronDoubleLeftIcon,
   ChevronDoubleRightIcon,
 } from '@heroicons/vue/24/outline';
+import ThemeToggle from '@/components/ThemeToggle.vue';
 
 interface Props {
   isMobile: boolean;

@@ -124,6 +124,7 @@ export interface AuthGetters {
 
 export interface AuthActions {
     clearError: () => void;
+    setError: (message: string) => void;
     changePassword: (data: PasswordChange) => Promise<any>; // Or specific response type
     deleteAccount: () => Promise<any>; // Or specific response type
     login: (credentials: Login) => Promise<void>;
@@ -149,6 +150,8 @@ export interface PeriodsState {
 export interface PeriodsGetters {}
 
 export interface PeriodsActions {
+    setError(message: string): void;
+    clearError(): void;
     fetchPeriods(page?: number, per_page?: number): Promise<void>;
     startPeriodToday(): Promise<void>;
     createPeriod(startDate: string): Promise<void>;

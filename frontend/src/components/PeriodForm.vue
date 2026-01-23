@@ -3,8 +3,10 @@ import {ref, computed, onMounted} from 'vue';
 import { usePeriodsStore } from '@/stores/periods';
 import getTodayDateString from "@/utils/dateUtils.ts";
 import { useI18n } from 'vue-i18n';
+import { useToast } from '@/composables/useToast';
 
 const { t } = useI18n();
+const toast = useToast();
 
 const periodsStore = usePeriodsStore();
 
@@ -21,7 +23,10 @@ const handleCreatePeriod = async () => {
   if (newPeriodStartDate.value) {
     await periodsStore.createPeriod(newPeriodStartDate.value);
     if (!periodsStore.error) {
+      toast.success(t('toast.periodCreated'));
       newPeriodStartDate.value = getTodayDateString(); // Reset to today if needed
+    } else {
+      toast.error(periodsStore.error);
     }
   }
 };
@@ -29,12 +34,17 @@ const handleCreatePeriod = async () => {
 const handleUpdatePeriod = async () => {
   if (currentOpenPeriod.value && currentPeriodEndDate.value) {
     if (new Date(currentPeriodEndDate.value) < new Date(currentOpenPeriod.value.start_date)) {
-      periodsStore.setError(t('periodForm.errors.endDateBeforeStart')); // Use setter if available
+      const errorMsg = t('periodForm.errors.endDateBeforeStart');
+      periodsStore.setError(errorMsg);
+      toast.error(errorMsg);
       return;
     }
     await periodsStore.updatePeriod(currentOpenPeriod.value.id, currentPeriodEndDate.value);
     if (!periodsStore.error) {
+      toast.success(t('toast.periodUpdated'));
       currentPeriodEndDate.value = getTodayDateString(); // Reset to today if needed
+    } else {
+      toast.error(periodsStore.error);
     }
   }
 };

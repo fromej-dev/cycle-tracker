@@ -45,14 +45,14 @@ jobs:
       - name: Install dependencies with uv sync
         run: uv sync
 
-      - name: Run black linter
-        run: black --check .
+      - name: Run ruff linter
+        run: uv run ruff check .
 
-      - name: Run isort linter
-        run: isort --check-only --profile black --filter-files .
+      - name: Run ruff formatter
+        run: uv run ruff format --check .
 
       - name: Run pytest
-        run: pytest
+        run: uv run pytest
 
   build_and_push_backend_image:
     runs-on: ubuntu-latest
@@ -141,20 +141,3 @@ jobs:
             --set image.repository=ghcr.io/${{ github.repository }} \
             --set image.tag=${{ steps.get_tag.outputs.image_tag }} \
             --wait
-
-  notify_matrix:
-    runs-on: ubuntu-latest
-    # This job depends on ALL previous jobs
-    needs: [helm_lint, python_lint_test, build_and_push_backend_image, deploy_chart]
-    # This job will always run, regardless of whether previous jobs succeeded or failed
-    if: always()
-
-    steps:
-      - name: Send Matrix notification
-        uses: Cadair/matrix-notify-action@main
-        id: message
-        with:
-          homeserver: ${{ secrets.MATRIX_HOMESERVER }}
-          room_id: ${{ secrets.MATRIX_ROOM_ID }}
-          matrix_token: ${{ secrets.MATRIX_ACCESS_TOKEN }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}

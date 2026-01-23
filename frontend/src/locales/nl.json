@@ -242,12 +242,30 @@
     "duration": "Duur:",
     "delete": "Verwijderen",
     "ongoing": "nu",
-    "noPeriods": "Nog geen menstruaties vastgelegd."
+    "noPeriods": "Nog geen menstruaties vastgelegd.",
+    "confirmDelete": {
+      "title": "Menstruatie verwijderen?",
+      "message": "Weet je zeker dat je deze menstruatie wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+      "confirm": "Ja, verwijderen",
+      "cancel": "Annuleren"
+    }
   },
   "confirmationModal": {
     "title": "Bevestig actie",
     "message": "Weet je zeker dat je verder wilt gaan?",
     "confirmText": "Bevestig",
     "cancelText": "Cancel"
+  },
+  "theme": {
+    "switchToDark": "Schakel over naar donkere modus",
+    "switchToLight": "Schakel over naar lichte modus"
+  },
+  "toast": {
+    "periodCreated": "Menstruatie succesvol geregistreerd",
+    "periodUpdated": "Menstruatie succesvol bijgewerkt",
+    "periodDeleted": "Menstruatie succesvol verwijderd",
+    "passwordChanged": "Wachtwoord succesvol gewijzigd",
+    "accountDeleted": "Account succesvol verwijderd",
+    "settingsUpdated": "Instellingen succesvol bijgewerkt"
   }
 }

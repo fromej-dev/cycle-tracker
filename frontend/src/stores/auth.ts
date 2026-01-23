@@ -29,6 +29,9 @@ export const useAuthStore = defineStore<'auth', AuthState, AuthGetters, AuthActi
         clearError() {
             this.error = null;
         },
+        setError(message: string) {
+            this.error = message;
+        },
         async changePassword(data: PasswordChange) {
             return await UsersApi.changeOwnPassword(data);
         },

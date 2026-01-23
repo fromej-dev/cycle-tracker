@@ -1,5 +1,4 @@
 import datetime
-from typing import List, Optional
 
 from app.extensions import db
 from app.models import Period
@@ -56,14 +55,14 @@ class PeriodService:
             ) from e
 
     @staticmethod
-    def get_period_by_id_for_user(user_id: int, period_id: int) -> Optional[Period]:
+    def get_period_by_id_for_user(user_id: int, period_id: int) -> Period | None:
         """Gets a specific period by its ID, ensuring it belongs to the user."""
         return Period.query.filter_by(id=period_id, user_id=user_id).first()
 
     @staticmethod
     def get_all_periods_for_user(
         user_id: int, page: int = 1, per_page: int = 10
-    ) -> List[Period]:
+    ) -> list[Period]:
         """Gets a paginated list of all periods for a user, ordered by start date descending."""
         # Using paginate for better handling of large datasets
         pagination = (

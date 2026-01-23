@@ -1,6 +1,3 @@
-import datetime
-from typing import Optional
-
 from sqlalchemy import Date  # Use SQLAlchemy's Date type
 
 from app.extensions import db
@@ -20,10 +17,10 @@ class Period(BaseModel):
     user = db.relationship("User", back_populates="periods")
 
     def __repr__(self) -> str:
-        return f'<Period {self.start_date} - {self.end_date or "Ongoing"} for User {self.user_id}>'
+        return f"<Period {self.start_date} - {self.end_date or 'Ongoing'} for User {self.user_id}>"
 
     @property
-    def duration(self) -> Optional[int]:
+    def duration(self) -> int | None:
         """Calculates the duration of the period in days (inclusive)."""
         if self.end_date:
             # Add 1 because duration includes both start and end days

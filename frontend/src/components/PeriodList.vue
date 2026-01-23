@@ -52,9 +52,9 @@ const toast = useToast();
 const { t } = useI18n();
 
 const showDeleteModal = ref(false);
-const periodToDelete = ref<number | null>(null);
+const periodToDelete = ref(null);
 
-const showDeleteConfirmation = (periodId: number) => {
+const showDeleteConfirmation = (periodId) => {
   periodToDelete.value = periodId;
   showDeleteModal.value = true;
 };

@@ -1,8 +1,9 @@
 import datetime
 import json
 
-from app.models import Period
 from flask import url_for
+
+from app.models import Period
 
 
 # Use the 'auth_client' fixture which provides a client with a valid JWT

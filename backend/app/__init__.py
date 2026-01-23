@@ -1,5 +1,4 @@
 import os
-from typing import Optional, Type
 
 from apiflask import APIFlask
 from flask import jsonify, send_from_directory
@@ -11,7 +10,7 @@ from app.models import Period, User
 from app.services import UserService
 
 
-def create_app(config_name: Optional[str] = None) -> APIFlask:
+def create_app(config_name: str | None = None) -> APIFlask:
     """
     Application factory function.
     Creates and configures the APIFlask application instance.
@@ -40,7 +39,7 @@ def create_app(config_name: Optional[str] = None) -> APIFlask:
         config_name = get_config_name()
 
     # Load configuration
-    config_object: Type[Config] = config_by_name[config_name]
+    config_object: type[Config] = config_by_name[config_name]
     app.config.from_object(config_object)
 
     # Ensure instance folder exists if not already created by config

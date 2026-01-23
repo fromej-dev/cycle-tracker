@@ -19,18 +19,16 @@ def validate_schema(schema: Schema):
             try:
                 # load() validates and deserializes data
                 # Pass context if needed by schema validators
-                loaded_data = schema.load(
-                    request.get_json(), context=request.get_json()
-                )
+                schema.load(request.get_json(), context=request.get_json())
                 # Optionally pass validated data to the route function
                 # kwargs['validated_data'] = loaded_data
             except MarshmallowValidationError as err:
                 # Raise your custom exception, passing Marshmallow's error messages
-                raise ValidationError(payload=err.messages)
+                raise ValidationError(payload=err.messages) from err
             except Exception as e:
                 # Handle cases where JSON is missing or malformed
                 if isinstance(e, (TypeError, ValueError)):  # common errors for bad JSON
-                    raise ValidationError(message="Invalid JSON data provided.")
+                    raise ValidationError(message="Invalid JSON data provided.") from e
                 raise  # Re-raise other unexpected errors
             return f(*args, **kwargs)  # Pass original args/kwargs
 
@@ -53,10 +51,10 @@ def validate_schema_with_data(schema: Schema):
                     request.get_json(), context=request.get_json()
                 )
             except MarshmallowValidationError as err:
-                raise ValidationError(payload=err.messages)
+                raise ValidationError(payload=err.messages) from err
             except Exception as e:
                 if isinstance(e, (TypeError, ValueError)):
-                    raise ValidationError(message="Invalid JSON data provided.")
+                    raise ValidationError(message="Invalid JSON data provided.") from e
                 raise
             # Pass loaded_data as the first arg, followed by others
             return f(loaded_data, *args, **kwargs)

@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any
 
 from flask_jwt_extended import create_access_token, create_refresh_token
 
@@ -12,7 +12,7 @@ class AuthService:
     """Service layer for authentication logic."""
 
     @staticmethod
-    def register_user(user_data: Dict[str, Any]) -> User:
+    def register_user(user_data: dict[str, Any]) -> User:
         """Registers a new user."""
         username = user_data["username"]
         email = user_data["email"]
@@ -38,7 +38,7 @@ class AuthService:
             ) from e
 
     @staticmethod
-    def login_user(login_data: Dict[str, Any]) -> dict[str, str]:
+    def login_user(login_data: dict[str, Any]) -> dict[str, str]:
         """Logs in a user and returns an access token."""
         login_identifier = login_data["login"]  # Can be username or email
         password = login_data["password"]

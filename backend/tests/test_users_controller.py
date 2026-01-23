@@ -1,6 +1,5 @@
 from flask import url_for
 
-from app import UserService
 from app.models import User
 
 

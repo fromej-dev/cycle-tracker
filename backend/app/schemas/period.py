@@ -1,10 +1,5 @@
-import datetime
-
 from apiflask import Schema, fields
 from marshmallow import ValidationError, validates_schema
-
-from app.extensions import ma
-from app.models import Period
 
 
 class PeriodSchema(Schema):

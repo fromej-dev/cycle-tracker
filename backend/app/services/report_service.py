@@ -1,8 +1,6 @@
 import datetime
 from statistics import StatisticsError, mean
-from typing import Dict, List, Optional, Tuple
 
-from app.extensions import db
 from app.models import Period
 
 
@@ -10,9 +8,9 @@ class ReportService:
     """Service layer for generating cycle and period statistics."""
 
     @staticmethod
-    def get_period_stats(user_id: int) -> Dict[str, Optional[float | int]]:
+    def get_period_stats(user_id: int) -> dict[str, float | int | None]:
         """Calculates statistics about period durations for a user."""
-        periods_with_duration: List[Period] = (
+        periods_with_duration: list[Period] = (
             Period.query.filter(
                 Period.user_id == user_id,
                 Period.end_date.isnot(None),  # Only consider completed periods
@@ -22,7 +20,7 @@ class ReportService:
         )
         count = Period.query.filter(Period.user_id == user_id).count()
 
-        durations: List[int] = [
+        durations: list[int] = [
             p.duration for p in periods_with_duration if p.duration is not None
         ]
 
@@ -47,14 +45,14 @@ class ReportService:
         }
 
     @staticmethod
-    def get_cycle_stats(user_id: int) -> Dict[str, Optional[float | int]]:
+    def get_cycle_stats(user_id: int) -> dict[str, float | int | None]:
         """
         Calculates statistics about cycle lengths for a user.
         Cycle length is defined as the time from the start of one period
         to the start of the next period.
         """
         # Fetch all periods sorted by start date to calculate intervals
-        periods: List[Period] = (
+        periods: list[Period] = (
             Period.query.filter_by(user_id=user_id)
             .order_by(Period.start_date.asc())
             .all()
@@ -69,7 +67,7 @@ class ReportService:
                 "average_length": None,
             }
 
-        cycle_lengths: List[int] = []
+        cycle_lengths: list[int] = []
         for i in range(len(periods) - 1):
             start_date_current = periods[i].start_date
             start_date_next = periods[i + 1].start_date
@@ -98,9 +96,9 @@ class ReportService:
         }
 
     @staticmethod
-    def get_predicted_next_period(user_id: int) -> Optional[datetime.date]:
+    def get_predicted_next_period(user_id: int) -> datetime.date | None:
         """Estimates the next period start date using average cycle length."""
-        periods: List[Period] = (
+        periods: list[Period] = (
             Period.query.filter_by(user_id=user_id)
             .order_by(Period.start_date.asc())
             .all()
@@ -129,7 +127,7 @@ class ReportService:
         return predicted_date
 
     @staticmethod
-    def get_estimated_ovulation(user_id: int) -> Optional[Dict[str, datetime.date]]:
+    def get_estimated_ovulation(user_id: int) -> dict[str, datetime.date] | None:
         """Estimates ovulation day and fertile window."""
         predicted_start = ReportService.get_predicted_next_period(user_id)
 
@@ -148,7 +146,7 @@ class ReportService:
         }
 
     @staticmethod
-    def get_cycle_context(user_id: int) -> Optional[Dict[str, any]]:
+    def get_cycle_context(user_id: int) -> dict[str, any] | None:
         """
         Returns contextual information about the user's current menstrual cycle.
 

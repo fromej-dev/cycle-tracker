@@ -1,5 +1,4 @@
 import datetime
-import json
 
 from flask import url_for
 
@@ -101,8 +100,7 @@ def test_update_period_not_found(auth_client):
     )
     assert response.status_code == 404  # NotFoundError
     assert (
-        response.get_json()["message"]
-        == f"Period with ID 9999 not found for this user."
+        response.get_json()["message"] == "Period with ID 9999 not found for this user."
     )
 
 

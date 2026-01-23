@@ -9,6 +9,7 @@
           <router-link :to="{ name: 'login' }" class="hover:underline">{{ $t('common.login')}}</router-link>
           <router-link :to="{ name: 'register' }" class="hover:underline">{{ $t('common.register')}}</router-link>
 
+        <ThemeToggle />
         <LanguagePicker/>
       </div>
     </div>
@@ -19,6 +20,7 @@
 import { useAuthStore } from '@/stores/auth';
 import { computed } from 'vue';
 import LanguagePicker from "@/components/LanguagePicker.vue";
+import ThemeToggle from "@/components/ThemeToggle.vue";
 
 const authStore = useAuthStore();
 const isAuthenticated = computed(() => authStore.isAuthenticated);

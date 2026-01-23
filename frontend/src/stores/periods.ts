@@ -17,6 +17,12 @@ export const usePeriodsStore = defineStore<'periods', PeriodsState, {}, PeriodsA
     }),
 
     actions: {
+        setError(message: string) {
+            this.error = message;
+        },
+        clearError() {
+            this.error = null;
+        },
         async fetchPeriods(page = this.pagination.page, per_page = this.pagination.per_page) {
             this.loading = true;
             this.error = null;

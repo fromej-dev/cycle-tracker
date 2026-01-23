@@ -1,0 +1,65 @@
+/* Toast customization for cycle tracker */
+
+/* Override default toast styles */
+.Vue-Toastification__toast {
+  font-family: inherit;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Success toast */
+.Vue-Toastification__toast--success {
+  background-color: #10b981;
+}
+
+/* Error toast */
+.Vue-Toastification__toast--error {
+  background-color: #ef4444;
+}
+
+/* Warning toast */
+.Vue-Toastification__toast--warning {
+  background-color: #f59e0b;
+}
+
+/* Info toast */
+.Vue-Toastification__toast--info {
+  background-color: var(--color-primary);
+}
+
+/* Dark mode support */
+.dark .Vue-Toastification__toast {
+  background-color: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+.dark .Vue-Toastification__toast--success {
+  background-color: #059669;
+}
+
+.dark .Vue-Toastification__toast--error {
+  background-color: #dc2626;
+}
+
+.dark .Vue-Toastification__toast--warning {
+  background-color: #d97706;
+}
+
+.dark .Vue-Toastification__toast--info {
+  background-color: var(--color-primary);
+}
+
+/* Progress bar */
+.Vue-Toastification__progress-bar {
+  background-color: rgba(255, 255, 255, 0.7);
+}
+
+/* Close button */
+.Vue-Toastification__close-button {
+  color: white;
+  opacity: 0.7;
+}
+
+.Vue-Toastification__close-button:hover {
+  opacity: 1;
+}

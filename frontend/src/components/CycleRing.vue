@@ -7,8 +7,10 @@
  *   hollow bubbles ........ FORECAST of the next period start, one per day: the bubble's size and
  *                           fill grow with p_start, so a regular cycle is a few big filled bubbles and an
  *                           irregular one many small faint ones. Date labels sit at the 80% range ends.
- *   dashed line ........... days overdue
- *   ink pill on the ring .. today
+ *   bracket + label ....... the 80% range as ONE span ("3–7 Nov")
+ *   tinted track .......... how far this cycle has come (period start to today)
+ *   dotted trail .......... days overdue (legend: "Overdue")
+ *   ink dot on the ring ... today, with its "Day N" pill attached just inside
  */
 import { computed } from 'vue';
 
@@ -21,7 +23,7 @@ interface Props {
   fertile?: { start: number; end: number } | null;
   fertilePast?: boolean;
   forecast?: { idx: number; p: number }[];
-  rangeLabels?: { idx: number; text: string }[];
+  rangeSpan?: { start: number; end: number; text: string } | null;
   overdue?: { start: number; end: number } | null;
   empty?: boolean;
 }
@@ -32,7 +34,7 @@ const props = withDefaults(defineProps<Props>(), {
   fertile: null,
   fertilePast: false,
   forecast: () => [],
-  rangeLabels: () => [],
+  rangeSpan: null,
   overdue: null,
   empty: false,
 });
@@ -90,28 +92,45 @@ const overduePath = computed(() => {
 const PEAK = 0.2; // p_start of a "sharp" forecast day
 const bubbles = computed(() =>
   props.forecast
-    .filter((d) => d.idx >= 0 && d.idx < N.value && d.p > 0.006)
+    .filter((d) => d.idx >= 0 && d.idx < N.value && d.p > 0.006 && (props.todayIdx === null || d.idx > props.todayIdx))
     .map((d) => {
       const x = Math.min(1, Math.sqrt(d.p / PEAK));
       const c = pt(d.idx + 0.5);
-      return { key: d.idx, cx: c.x, cy: c.y, r: 3 + (W / 2 - 1.5 - 3) * x, fill: 0.1 + 0.8 * x * x, line: 0.45 + 0.55 * x };
+      return { key: d.idx, cx: c.x, cy: c.y, r: 3 + (W / 2 - 1.5 - 3) * x, fill: 0.2 + 0.8 * x * x, line: 0.85 + 0.15 * x };
     }),
 );
 
-const labels = computed(() =>
-  props.rangeLabels
-    .filter((l) => l.idx >= 0 && l.idx < N.value)
-    .map((l) => {
-      const c = pt(l.idx + 0.5, R + W / 2 + 12);
-      const cos = Math.cos(rad(l.idx + 0.5));
-      return { ...l, x: c.x, y: c.y + 4, anchor: cos > 0.35 ? 'start' : cos < -0.35 ? 'end' : 'middle' };
-    }),
-);
+const SR = R + W / 2 + 5;
+const span = computed(() => {
+  const sp = props.rangeSpan;
+  if (!sp) return null;
+  const a = Math.max(0, sp.start);
+  const b = Math.min(N.value, sp.end + 1);
+  if (b <= a) return null;
+  const mid = (a + b) / 2;
+  const c = pt(mid, SR + 15);
+  const cos = Math.cos((ang(mid) * Math.PI) / 180);
+  const t0 = pt(a + 0.12, SR);
+  const t1 = pt(b - 0.12, SR);
+  return {
+    d: arc(a + 0.12, b - 0.12, SR),
+    text: sp.text,
+    x: c.x,
+    y: c.y + 4,
+    anchor: cos > 0.6 ? 'start' : cos < -0.6 ? 'end' : 'middle',
+    t0, t1,
+  };
+});
 
-const onPeriod = computed(() => props.todayIdx !== null && props.todayIdx < props.periodDays);
+const tintPath = computed(() => {
+  if (props.todayIdx === null || props.empty) return null;
+  const end = Math.min(props.todayIdx + 0.5, N.value - 0.01);
+  return end > 0.2 ? arc(0, end) : null;
+});
+
 const today = computed(() => (props.todayIdx === null ? null : pt(Math.min(props.todayIdx, N.value - 1) + 0.5)));
-// when today sits on the period arc the pill steps inside the plate so it never hides the arc
-const pillPos = computed(() => (props.todayIdx === null ? null : pt(Math.min(props.todayIdx, N.value - 1) + 0.5, onPeriod.value ? R - W / 2 - 17 : R)));
+// the pill sits just inside the track, joined to the today dot by a short stem
+const pillPos = computed(() => (props.todayIdx === null ? null : pt(Math.min(props.todayIdx, N.value - 1) + 0.5, R - W / 2 - 17)));
 const pillW = computed(() => 20 + props.dayLabel.length * 7.2);
 </script>
 
@@ -121,23 +140,32 @@ const pillW = computed(() => 20 + props.dayLabel.length * 7.2);
       <circle :cx="C" :cy="C" :r="R - W / 2 - 1" class="plate" />
       <circle :cx="C" :cy="C" :r="R" fill="none" :stroke-width="W" class="track" />
 
-      <path v-if="fertilePath" :d="fertilePath" fill="none" :stroke-width="FW" stroke-linecap="round" class="fertile ring-fade" :style="{ strokeOpacity: fertilePast ? 0.4 : 1 }" />
+      <path v-if="tintPath" :d="tintPath" fill="none" :stroke-width="W" stroke-linecap="round" class="progress ring-fade" />
 
-      <path v-if="overduePath" :d="overduePath" fill="none" stroke-width="3" stroke-linecap="round" stroke-dasharray="0.1 9" class="overdue ring-fade" />
+      <path v-if="fertilePath" :d="fertilePath" fill="none" :stroke-width="FW" stroke-linecap="round" class="fertile ring-fade" />
+
+      <path v-if="overduePath" :d="overduePath" fill="none" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="0.1 11" class="overdue ring-fade" />
 
       <path v-if="empty" :d="arc(0.4, 5.6)" fill="none" stroke-width="6" stroke-linecap="round" stroke-dasharray="0.1 13" class="ghost" />
 
       <g v-if="!empty" class="ring-fade">
-        <circle v-for="b in bubbles" :key="b.key" :cx="b.cx" :cy="b.cy" :r="b.r" class="bubble" :style="{ fillOpacity: b.fill, strokeOpacity: b.line }" />
+        <g v-for="b in bubbles" :key="b.key">
+          <circle :cx="b.cx" :cy="b.cy" :r="b.r" class="bubble-base" />
+          <circle :cx="b.cx" :cy="b.cy" :r="b.r" class="bubble" :style="{ fillOpacity: b.fill, strokeOpacity: b.line }" />
+        </g>
       </g>
 
       <path v-if="extraPath" :d="extraPath" fill="none" :stroke-width="W" stroke-linecap="round" class="period-extra ring-fade" />
       <path v-if="periodPath" :d="periodPath" fill="none" :stroke-width="W" stroke-linecap="round" class="period ring-fade" />
 
-      <text v-for="l in labels" :key="l.idx" :x="l.x" :y="l.y" :text-anchor="l.anchor" class="range-label ring-fade">{{ l.text }}</text>
+      <g v-if="span" class="ring-fade">
+        <path :d="span.d" fill="none" stroke-width="2" stroke-linecap="round" class="bracket" />
+        <text :x="span.x" :y="span.y" :text-anchor="span.anchor" class="range-label">{{ span.text }}</text>
+      </g>
 
       <g v-if="pillPos && today && !empty && dayLabel" class="ring-fade">
-        <circle v-if="onPeriod" :cx="today.x" :cy="today.y" r="6.5" class="today-dot" />
+        <line :x1="today.x" :y1="today.y" :x2="pillPos.x" :y2="pillPos.y" stroke-width="2.5" class="stem" />
+        <circle :cx="today.x" :cy="today.y" r="8" class="today-dot" />
         <rect :x="pillPos.x - pillW / 2" :y="pillPos.y - 13" :width="pillW" height="26" rx="13" class="pill" />
         <text :x="pillPos.x" :y="pillPos.y + 4.5" text-anchor="middle" class="pill-text">{{ dayLabel }}</text>
       </g>
@@ -153,16 +181,20 @@ const pillW = computed(() => 20 + props.dayLabel.length * 7.2);
   position: absolute; inset: 21% 20%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
 }
 .plate { fill: var(--color-surface); stroke: var(--color-line); stroke-width: 1; }
-.track { stroke: var(--color-surface-muted); }
+.track { stroke: color-mix(in srgb, var(--color-ink) 9%, var(--color-surface)); }
+.progress { stroke: color-mix(in srgb, var(--color-period) var(--ring-tint, 20%), transparent); }
+.bracket { stroke: var(--color-ink-soft); }
+.stem { stroke: var(--color-ink); }
+.bubble-base { fill: var(--color-surface); }
 .fertile { stroke: var(--color-fertile); }
 .period { stroke: var(--color-period); }
 .period-extra { stroke: var(--color-period); stroke-opacity: .26; }
 .overdue { stroke: var(--color-period); }
 .ghost { stroke: var(--color-period); stroke-opacity: .55; }
-.bubble { fill: var(--color-period); stroke: var(--color-period); stroke-width: 1.6; }
-.range-label { font: 600 11.5px var(--font-sans); fill: var(--color-ink-soft); }
+.bubble { fill: var(--color-period); stroke: var(--color-period); stroke-width: 1.8; }
+.range-label { paint-order: stroke; stroke: var(--color-background); stroke-width: 5px; stroke-linejoin: round; font: 700 12px var(--font-sans); fill: var(--color-ink); }
 .pill { fill: var(--color-ink); }
-.today-dot { fill: var(--color-ink); stroke: var(--color-surface); stroke-width: 2.5; }
+.today-dot { fill: var(--color-ink); stroke: var(--color-surface); stroke-width: 3; }
 .pill-text { font: 700 12.5px var(--font-sans); fill: var(--color-surface); }
 
 @media (prefers-reduced-motion: no-preference) {

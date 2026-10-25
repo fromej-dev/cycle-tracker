@@ -280,7 +280,8 @@
   },
   "nav": {
     "dashboard": "Vandaag",
-    "account": "Account"
+    "account": "Account",
+    "calendar": "Kalender"
   },
   "phases": {
     "period": "Menstruatie",
@@ -336,5 +337,44 @@
     "cyclePlusMinus": "{avg} ± {sd} dagen",
     "periodLength": "Gemiddelde menstruatie",
     "periodDays": "{n} dagen"
+  },
+  "calendar": {
+    "prev": "Vorige maand",
+    "next": "Volgende maand",
+    "today": "Vandaag",
+    "close": "Sluiten",
+    "start": "Menstruatie begon deze dag",
+    "end": "Menstruatie eindigde deze dag",
+    "noteForecast": "Volgende menstruatie waarschijnlijk {range} ({pct}% zeker)",
+    "noteLate": "Je menstruatie is later dan gewoonlijk, dus voorspelde dagen zijn verborgen tot hij begint.",
+    "noteLearning": "Log nog een paar menstruaties om voorspelde dagen te zien.",
+    "noteBeyond": "Voorspellingen reiken ongeveer zes weken vooruit, dus latere maanden blijven leeg.",
+    "notePartial": "Voorspellingen reiken ongeveer zes weken vooruit; latere dagen blijven leeg.",
+    "legend": {
+      "title": "Legenda",
+      "logged": "Gelogde menstruatie",
+      "predicted": "Voorspelde menstruatie",
+      "fertile": "Vruchtbare dagen",
+      "ovulation": "Waarschijnlijke eisprong",
+      "today": "Vandaag",
+      "hint": "Gestippelde vlakken zijn voorspellingen, geen registraties. Hoe lichter, hoe minder waarschijnlijk."
+    },
+    "facts": {
+      "logged": "Gelogde menstruatiedag {n}",
+      "ongoing": "Nog bezig. Tik een latere dag aan om het einde te markeren.",
+      "chance": "{pct}% kans op menstruatie",
+      "predictionNote": "Een voorspelling, geen registratie",
+      "ovulation": "Waarschijnlijke eisprong",
+      "fertile": "Waarschijnlijk vruchtbaar",
+      "fertileChance": "{pct}% kans om vruchtbaar te zijn",
+      "noPeriod": "Geen menstruatie verwacht",
+      "nothingLogged": "Niets gelogd",
+      "tooFar": "Te ver vooruit om te voorspellen",
+      "late": "Voorspellingen staan stil terwijl je menstruatie later is",
+      "learning": "Nog te weinig gelogde menstruaties om te voorspellen"
+    },
+    "errors": {
+      "generic": "Dat lukte niet. Controleer de datums en probeer opnieuw."
+    }
   }
 }

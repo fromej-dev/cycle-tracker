@@ -91,14 +91,13 @@ const hasForecast = computed(() => !!f.value?.interval_80 && forecastDays.value.
 
 const overdue = computed(() => (isLate.value && todayIdx.value > baseLength.value ? { start: baseLength.value, end: todayIdx.value } : null));
 
-const rangeLabels = computed(() => {
+const rangeSpan = computed(() => {
   const r = f.value?.interval_80;
-  if (!hasForecast.value || !r) return [];
+  if (!hasForecast.value || isLate.value || !r || r80StartIdx.value === null || r80EndIdx.value === null) return null;
+  if (r80EndIdx.value - r80StartIdx.value > 9) return null; // too wide to bracket usefully; the hero already says "about"
   const bt = formatBetween(r.start, r.end, locale.value);
-  const out: { idx: number; text: string }[] = [];
-  if (r80StartIdx.value !== null && r80StartIdx.value > todayIdx.value) out.push({ idx: r80StartIdx.value, text: bt?.a ?? formatShort(r.start, locale.value) });
-  if (r80EndIdx.value !== null && r80EndIdx.value !== r80StartIdx.value) out.push({ idx: r80EndIdx.value, text: bt?.b ?? formatShort(r.end, locale.value) });
-  return out;
+  const text = r80StartIdx.value === r80EndIdx.value ? formatShort(r.end, locale.value) : `${bt?.a}–${bt?.b}`;
+  return { start: Math.max(r80StartIdx.value, todayIdx.value + 1), end: r80EndIdx.value, text };
 });
 
 // ---- words: the hero answers "when?" ----
@@ -158,7 +157,7 @@ async function act() {
         :fertile="fertile"
         :fertile-past="fertilePast"
         :forecast="hasForecast ? forecastDays : []"
-        :range-labels="rangeLabels"
+        :range-span="rangeSpan"
         :overdue="overdue"
         :empty="isEmpty">
       <template v-if="isEmpty">
@@ -176,6 +175,7 @@ async function act() {
     <div v-if="!isEmpty" class="mt-1 flex flex-wrap justify-center gap-x-5 gap-y-1.5 text-xs text-ink-soft">
       <span class="inline-flex items-center gap-1.5"><span class="legend-dot" style="background: var(--color-period)"></span>{{ $t('today.legendPeriod') }}</span>
       <span v-if="fertile" class="inline-flex items-center gap-1.5"><span class="legend-bar"></span>{{ $t('today.legendFertile') }}</span>
+      <span v-if="overdue" class="inline-flex items-center gap-1.5"><span class="legend-dotted"></span>{{ $t('today.legendOverdue') }}</span>
       <span v-if="hasForecast" class="inline-flex items-center gap-1.5"><span class="legend-bubbles"><i></i><i></i><i></i></span>{{ $t('today.legendForecast') }}</span>
     </div>
 
@@ -199,6 +199,7 @@ async function act() {
   color: var(--color-ink);
 }
 .legend-dot { display: inline-block; width: .6rem; height: .6rem; border-radius: 9999px; }
+.legend-dotted { display: inline-block; width: 1.1rem; height: 0; border-top: 4px dotted var(--color-period); }
 .legend-bar { display: inline-block; width: 1.1rem; height: .3rem; border-radius: 9999px; background: var(--color-fertile); }
 .legend-bubbles { display: inline-flex; align-items: center; gap: 2px; }
 .legend-bubbles i { display: block; border-radius: 9999px; border: 1.4px solid var(--color-period); background: color-mix(in srgb, var(--color-period) 45%, transparent); }

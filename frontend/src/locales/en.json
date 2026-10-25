@@ -280,7 +280,8 @@
   },
   "nav": {
     "dashboard": "Today",
-    "account": "Account"
+    "account": "Account",
+    "calendar": "Calendar"
   },
   "phases": {
     "period": "Period",
@@ -336,5 +337,44 @@
     "cyclePlusMinus": "{avg} ± {sd} days",
     "periodLength": "Average period",
     "periodDays": "{n} days"
+  },
+  "calendar": {
+    "prev": "Previous month",
+    "next": "Next month",
+    "today": "Today",
+    "close": "Close",
+    "start": "Period started this day",
+    "end": "Period ended this day",
+    "noteForecast": "Next period most likely {range} ({pct}% sure)",
+    "noteLate": "Your period is later than usual, so predicted days are hidden until it starts.",
+    "noteLearning": "Log a couple more periods to see predicted days.",
+    "noteBeyond": "Predictions reach about six weeks ahead, so later months stay blank.",
+    "notePartial": "Predictions reach about six weeks ahead; later days stay blank.",
+    "legend": {
+      "title": "Legend",
+      "logged": "Logged period",
+      "predicted": "Predicted period",
+      "fertile": "Fertile days",
+      "ovulation": "Likely ovulation",
+      "today": "Today",
+      "hint": "Dashed tiles are predictions, not records. The fainter the tile, the less likely."
+    },
+    "facts": {
+      "logged": "Logged period day {n}",
+      "ongoing": "Still going. Tap a later day to mark the end.",
+      "chance": "{pct}% chance of period",
+      "predictionNote": "A prediction, not a record",
+      "ovulation": "Likely ovulation",
+      "fertile": "Likely fertile",
+      "fertileChance": "{pct}% chance of being fertile",
+      "noPeriod": "No period expected",
+      "nothingLogged": "Nothing logged",
+      "tooFar": "Too far ahead to predict",
+      "late": "Predictions are paused while your period is late",
+      "learning": "Not enough logged periods to predict yet"
+    },
+    "errors": {
+      "generic": "That didn't work. Check the dates and try again."
+    }
   }
 }

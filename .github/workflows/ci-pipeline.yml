@@ -22,7 +22,8 @@ jobs:
 
       - name: Run helm lint
         # Optional: Add conditional execution based on file changes if desired
-        run: helm lint ./cycle-tracker
+        # The chart refuses to render without secrets; lint with a placeholder Secret name.
+        run: helm lint ./cycle-tracker --set secrets.existingSecret=lint-placeholder
 
   python_lint_test:
     runs-on: ubuntu-latest

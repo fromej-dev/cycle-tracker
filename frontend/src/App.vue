@@ -21,11 +21,13 @@
       </main>
     </div>
 
+    <UndoToast />
   </div>
 </template>
 
 <script setup lang="ts">
 import { RouterView } from 'vue-router';
+import UndoToast from '@/components/UndoToast.vue';
 import Navigation from '@/components/Navigation.vue';
 import "@khmyznikov/pwa-install";
 import { useTemplateRef } from "vue";

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
   addDays, addMonths, differenceInCalendarDays, endOfMonth, format, formatISO, isSameMonth, parseISO,
@@ -10,13 +10,14 @@ import CalendarDay from '@/components/CalendarDay.vue';
 import DaySheet, { type Fact } from '@/components/DaySheet.vue';
 import { usePeriodsStore } from '@/stores/periods';
 import { useReportsStore } from '@/stores/reports';
-import { useCalendarForecast } from '@/composables/useCalendarForecast';
+import { dateCheckApi } from '@/api/plan';
+import { useCalendarForecast, setExternalDays, clearExternalDays } from '@/composables/useCalendarForecast';
 import { dfLocale, formatDay, formatBetween } from '@/utils/formatDate';
 
 const { t, locale } = useI18n();
 const periodsStore = usePeriodsStore();
 const reports = useReportsStore();
-const { forecast, reason, byDate, prob, fertileMap, lastCovered } = useCalendarForecast();
+const { forecast, forecastEnd, reason, byDate, prob, fertileMap, lastCovered } = useCalendarForecast();
 
 const iso = (d: Date) => formatISO(d, { representation: 'date' });
 const today = startOfDay(new Date());
@@ -93,6 +94,19 @@ const months = computed(() => [month.value, addMonths(month.value, 1)].map((m) =
   cells: monthCells(m),
 })));
 
+const startWinSet = computed(() => {
+  const r = forecast.value?.interval_80;
+  const set = new Set<string>();
+  if (reason.value || !r) return set;
+  for (let d = parseISO(r.start); d <= parseISO(r.end); d = addDays(d, 1)) set.add(iso(d));
+  return set;
+});
+const startWinOf = (c: Cell) => {
+  if (!startWinSet.value.has(c.iso) || loggedMap.value.get(c.iso)) return null;
+  const prev = c.col > 0 && startWinSet.value.has(iso(subDays(parseISO(c.iso), 1)));
+  const next = c.col < 6 && startWinSet.value.has(iso(addDays(parseISO(c.iso), 1)));
+  return prev && next ? 'mid' : prev ? 'last' : next ? 'first' : 'only';
+};
 const info = (c: Cell) => {
   const lg = loggedMap.value.get(c.iso);
   const pr = lg ? null : prob(c.iso);
@@ -104,6 +118,8 @@ const info = (c: Cell) => {
     fertile: !lg ? fertileMap.value.get(c.iso)?.strength ?? 0 : 0,
     projected: fertileMap.value.get(c.iso)?.projected ?? false,
     ovulation: !lg && !!fertileMap.value.get(c.iso)?.ovulation,
+    far: !!forecastEnd.value && c.iso > forecastEnd.value,
+    startWin: startWinOf(c),
     likelyStart: !lg && forecast.value?.most_likely_start === c.iso && !reason.value,
   };
 };
@@ -121,8 +137,33 @@ const summary = computed(() => {
   return null;
 });
 const shownEnd = computed(() => endOfMonth(addMonths(month.value, 1)));
-const beyond = computed(() => !reason.value && !!lastCovered.value && shownEnd.value > parseISO(lastCovered.value) && shownEnd.value > today);
-const beyondAll = computed(() => !reason.value && !!lastCovered.value && startOfMonth(month.value) > parseISO(lastCovered.value));
+// Months past the ~45-day forecast: fetch Date Check in <=60-day chunks (cached) so far months are shaded too.
+const MAX_DAYS = 366;
+const fetched = new Set<string>();
+async function loadFar() {
+  const fe = forecastEnd.value;
+  if (reason.value || !fe) return;
+  const first = addDays(parseISO(fe), 1);
+  const limit = addDays(today, MAX_DAYS);
+  const want = shownEnd.value < limit ? shownEnd.value : limit;
+  for (let s = first; s <= want; s = addDays(s, 60)) {
+    const e = addDays(s, 59) > limit ? limit : addDays(s, 59);
+    if (e < startOfMonth(month.value) || s > shownEnd.value) continue;
+    const key = `${iso(s)}`;
+    if (fetched.has(key)) continue;
+    fetched.add(key);
+    try {
+      const r = await dateCheckApi.check(iso(s), iso(e));
+      if (r.data.status === 'ok') setExternalDays(r.data.days);
+    } catch { fetched.delete(key); }
+  }
+}
+watch([month, forecastEnd], loadFar);
+watch(forecast, (n, o) => { if (o && n !== o) { fetched.clear(); clearExternalDays(); loadFar(); } });
+onMounted(loadFar);
+
+const beyond = computed(() => !reason.value && !!forecastEnd.value && shownEnd.value > parseISO(forecastEnd.value) && startOfMonth(month.value) <= addDays(today, MAX_DAYS));
+const beyondAll = computed(() => !reason.value && !!forecastEnd.value && startOfMonth(month.value) > addDays(today, MAX_DAYS));
 const hasFertile = computed(() => fertileMap.value.size > 0);
 const hasPred = computed(() => !reason.value && [...byDate.value.values()].some((v) => v.p_bleeding >= 0.18));
 
@@ -221,7 +262,7 @@ const dayLabel = (c: Cell) => {
 </script>
 
 <template>
-  <div class="mx-auto max-w-lg px-3 pt-5 pb-8">
+  <div class="mx-auto max-w-lg px-3 pt-5 pb-28">
     <header class="flex items-center justify-between px-1">
       <button type="button" class="nav-btn" :aria-label="$t('calendar.prev')" :disabled="!canPrev" @click="go(-1)"><ChevronLeftIcon class="h-5 w-5" /></button>
       <div class="text-center">
@@ -269,6 +310,7 @@ const dayLabel = (c: Cell) => {
       <li v-if="hasPred"><span class="sw-scale"><i class="sw sw-pred" style="--s:.15"></i><i class="sw sw-pred" style="--s:.5"></i><i class="sw sw-pred" style="--s:1"></i></span>{{ $t('calendar.legend.predicted') }}</li>
       <li v-if="hasFertile"><span class="sw sw-fertile"></span>{{ $t('calendar.legend.fertile') }}</li>
       <li v-if="hasFertile"><span class="sw-ov"></span>{{ $t('calendar.legend.ovulation') }}</li>
+      <li v-if="hasPred"><span class="sw-win"></span>{{ $t('calendar.legend.window') }}</li>
       <li v-if="hasPred"><span class="sw-start"></span>{{ $t('calendar.legend.start') }}</li>
       <li><span class="sw sw-today"></span>{{ $t('calendar.legend.today') }}</li>
     </ul>
@@ -306,8 +348,9 @@ const dayLabel = (c: Cell) => {
 .sw-pred { width: .8125rem; height: 1.0625rem; border-radius: .3rem;
   background: color-mix(in srgb, var(--color-period) calc(var(--tile-t0) + var(--tile-t1) * var(--s)), var(--color-surface));
   border: 1.5px dashed color-mix(in srgb, var(--color-period) calc(var(--edge-t0) + 50% * var(--s)), transparent); }
-.sw-fertile { background: color-mix(in srgb, var(--color-fertile) calc(var(--tile-t0) + var(--tile-t1) * .7), var(--color-surface)); border: 1.5px solid color-mix(in srgb, var(--color-fertile) calc(var(--edge-t0) + 28%), transparent); }
+.sw-fertile { background: color-mix(in srgb, var(--color-fertile) calc(var(--ftile-t0) + var(--ftile-t1) * .7), var(--fertile-base)); border: 1.5px solid color-mix(in srgb, var(--color-fertile) calc(var(--edge-t0) + 28%), transparent); }
 .sw-ov { display: inline-block; width: .6875rem; height: .6875rem; border-radius: 9999px; border: 2px solid var(--color-fertile); }
+.sw-win { display: inline-block; width: 1.25rem; height: 3px; border-radius: 9999px; background: var(--color-period); }
 .sw-start { display: inline-block; width: .375rem; height: .375rem; border-radius: 9999px; background: var(--color-period); }
 .sw-today { border: 2px solid var(--color-ink); }
 

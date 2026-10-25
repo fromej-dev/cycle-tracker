@@ -1,9 +1,9 @@
 <template>
   <div class="dashboard mx-auto max-w-5xl">
 
-    <div v-if="reportsStore.loading && reportsStore.periodStats?.count === undefined" class="text-center py-12">
-      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      <p class="mt-4 text-ink-soft">{{ $t('dashboard.loader.message') }}</p>
+    <div v-if="reportsStore.loading && reportsStore.periodStats?.count === undefined" class="px-5 pt-6 flex flex-col gap-8">
+      <Skeleton variant="ring" />
+      <Skeleton variant="card" />
     </div>
 
     <div v-else-if="reportsStore.error && reportsStore.periodStats?.count === undefined" class="bg-danger-soft border border-danger text-danger-ink p-6 m-4 rounded-3xl" role="alert">
@@ -35,6 +35,14 @@
             :is-in-fertile-window="reportsStore.cycleContext?.is_in_fertile_window"/>
       </section>
 
+      <section v-if="reportsStore.periodStats?.count > 1" aria-labelledby="history-heading" class="flex flex-col gap-4">
+        <div class="flex items-baseline justify-between gap-3">
+          <h2 id="history-heading" class="section-title">{{ $t('history.title') }}</h2>
+          <router-link :to="{ name: 'history' }" class="inline-flex min-h-11 items-center text-sm font-semibold text-primary">{{ $t('history.seeAll') }}</router-link>
+        </div>
+        <CycleHistory :limit="6" />
+      </section>
+
       <section id="record-period-section" class="grid grid-cols-1 lg:grid-cols-2 gap-10" aria-labelledby="log-history-heading">
         <div>
           <h2 id="log-history-heading" class="section-title mb-4">{{ $t('dashboard.sections.logHistory.recordTitle') }}</h2>
@@ -58,6 +66,8 @@
 import { useReportsStore } from '@/stores/reports';
 import PeriodForm from '@/components/PeriodForm.vue';
 import PeriodList from '@/components/PeriodList.vue';
+import Skeleton from '@/components/Skeleton.vue';
+import CycleHistory from '@/components/CycleHistory.vue';
 import TodayHero from "@/components/TodayHero.vue";
 import {computed, onMounted} from "vue";
 import FertileWindowCard from "@/components/FertileWindowCard.vue";

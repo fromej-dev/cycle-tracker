@@ -74,6 +74,7 @@ export interface Forecast {
     days: ForecastDay[] | null;
     fertile_window: { start: string; end: string; ovulation_date: string | null; ovulation_interval_80?: ForecastInterval | null } | null;
     is_late: boolean;
+    secondary_window?: { start: string; end: string; probability: number } | null;
 }
 
 // --- Auth & User ---

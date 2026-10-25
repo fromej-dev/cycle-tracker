@@ -83,11 +83,12 @@ import { RouterLink } from 'vue-router';
 import {
   HomeIcon,
   CalendarDaysIcon,
+  CalendarDateRangeIcon,
   UserCircleIcon,
   ChevronDoubleLeftIcon,
   ChevronDoubleRightIcon,
 } from '@heroicons/vue/24/outline';
-import { CalendarDaysIcon as CalendarSolid, HomeIcon as HomeSolid, UserCircleIcon as UserCircleSolid } from '@heroicons/vue/24/solid';
+import { CalendarDateRangeIcon as PlanSolid, CalendarDaysIcon as CalendarSolid, HomeIcon as HomeSolid, UserCircleIcon as UserCircleSolid } from '@heroicons/vue/24/solid';
 import ThemeToggle from '@/components/ThemeToggle.vue';
 
 interface Props {
@@ -104,6 +105,7 @@ const sidebarOpen = ref<boolean>(true);
 const navigationItems = [
   { key: 'dashboard', label: 'nav.dashboard', to: '/dashboard', icon: HomeIcon, iconActive: HomeSolid },
   { key: 'calendar', label: 'nav.calendar', to: '/calendar', icon: CalendarDaysIcon, iconActive: CalendarSolid },
+  { key: 'plan', label: 'nav.plan', to: '/plan', icon: CalendarDateRangeIcon, iconActive: PlanSolid },
   { key: 'account', label: 'nav.account', to: '/account', icon: UserCircleIcon, iconActive: UserCircleSolid },
 ];
 

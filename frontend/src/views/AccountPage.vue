@@ -101,6 +101,8 @@
         </div>
       </section>
 
+      <CalendarFeedCard />
+
       <section aria-labelledby="change-password-heading" class="card p-6">
         <h3 id="change-password-heading" class="section-title mb-4">
           {{ $t('accountPage.changePassword.title') }}</h3>
@@ -196,6 +198,7 @@ import { ref, reactive, computed, onMounted } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { useRouter } from 'vue-router';
 import ConfirmationModal from "@/components/ConfirmationModal.vue";
+import CalendarFeedCard from '@/components/CalendarFeedCard.vue';
 import LanguagePicker from "@/components/LanguagePicker.vue";
 import UserApi from '@/api/users.ts';
 import { CheckIcon, CheckCircleIcon, XMarkIcon, PencilSquareIcon, SunIcon, MoonIcon } from '@heroicons/vue/24/outline';

@@ -5,6 +5,8 @@ import LoginPage from '@/views/LoginPage.vue';
 import RegisterPage from '@/views/RegisterPage.vue';
 import DashboardPage from '@/views/DashboardPage.vue';
 import CalendarPage from '@/views/CalendarPage.vue';
+import PlanPage from '@/views/PlanPage.vue';
+import HistoryPage from '@/views/HistoryPage.vue';
 import { useAuthStore } from '@/stores/auth';
 import AccountPage from "@/views/AccountPage.vue";
 
@@ -38,6 +40,18 @@ const routes: Array<RouteRecordRaw> = [
         path: '/calendar',
         name: 'calendar',
         component: CalendarPage,
+        meta: { requiresAuth: true } as { requiresAuth: boolean }
+    },
+    {
+        path: '/plan',
+        name: 'plan',
+        component: PlanPage,
+        meta: { requiresAuth: true } as { requiresAuth: boolean }
+    },
+    {
+        path: '/history',
+        name: 'history',
+        component: HistoryPage,
         meta: { requiresAuth: true } as { requiresAuth: boolean }
     },
     {

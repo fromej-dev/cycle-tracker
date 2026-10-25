@@ -281,7 +281,8 @@
   "nav": {
     "dashboard": "Today",
     "account": "Account",
-    "calendar": "Calendar"
+    "calendar": "Calendar",
+    "plan": "Plan"
   },
   "phases": {
     "period": "Period",
@@ -321,7 +322,13 @@
     "legendForecast": "Forecast",
     "legendOverdue": "Overdue",
     "dayChip": "Day {n}",
-    "legendElapsed": "So far"
+    "legendElapsed": "So far",
+    "secondary": "Or, if you missed logging a period: around {range} ({pct}%)",
+    "undo": {
+      "started": "Period started today",
+      "ended": "Period ended today",
+      "button": "Undo"
+    }
   },
   "forecast": {
     "confidence": {
@@ -346,20 +353,21 @@
     "close": "Close",
     "start": "Period started this day",
     "end": "Period ended this day",
-    "noteForecast": "Period most likely starts {range} ({pct}% sure)",
+    "noteForecast": "Period most likely starts {range} (underlined, {pct}% sure). Shaded days show where bleeding could fall.",
     "noteLate": "Your period is later than usual, so predicted days are hidden until it starts.",
     "noteLearning": "Log a couple more periods to see predicted days.",
-    "noteBeyond": "Predictions reach about six weeks ahead, so later months stay blank.",
-    "notePartial": "Predictions reach about six weeks ahead; later days stay blank.",
+    "noteBeyond": "Predictions reach about a year ahead, so later months stay blank.",
+    "notePartial": "Further ahead, predictions get fuzzier: the shading is lighter because we are less sure.",
     "legend": {
       "title": "Legend",
       "logged": "Logged period",
-      "predicted": "Predicted period",
+      "predicted": "Possible bleeding days",
       "fertile": "Fertile days",
       "ovulation": "Likely ovulation",
       "today": "Today",
       "hint": "Dashed tiles are predictions, not records. The fainter the tile, the less likely.",
-      "start": "Most likely start"
+      "start": "Most likely start day",
+      "window": "Likely start window"
     },
     "facts": {
       "logged": "Logged period day {n}",
@@ -380,6 +388,133 @@
     },
     "errors": {
       "generic": "That didn't work. Check the dates and try again."
+    }
+  },
+  "history": {
+    "title": "Your cycles",
+    "seeAll": "See all",
+    "intro": "Every cycle, lined up at day 1, newest first. Tap a row for its dates.",
+    "empty": "Log a couple of periods and your cycles line up here.",
+    "average": "Average cycle",
+    "basedOn": "Based on your last {n} cycles. The shaded band is your typical range.",
+    "current": "This cycle, day {n}",
+    "typical": "Typical for you",
+    "short": "Shorter than usual",
+    "long": "Longer than usual",
+    "gap": "Maybe a missed log",
+    "now": "today",
+    "periodDays": "Period: {n} days",
+    "ongoingOrJust": "this cycle is still going",
+    "fertileEst": "Estimated fertile days: day {a} to {b} (a guess from cycle length)",
+    "gapDetail": "A gap of {n} days is about twice your usual {usual}. Probably a period that was not logged, so it is left out of your average.",
+    "legendPeriod": "Period",
+    "legendFertile": "Estimated fertile days",
+    "legendTypical": "Your typical range"
+  },
+  "plan": {
+    "eyebrow": "Plan",
+    "title": "Will I have my period on…?",
+    "intro": "Pick a day or a trip and see the honest odds.",
+    "pick": "Dates",
+    "from": "From",
+    "to": "To",
+    "answer": {
+      "single": "chance of your period on {date}",
+      "range": "chance of your period at some point in these {n} days"
+    },
+    "timelineLabel": "Chance of bleeding for each day in the range",
+    "legendLikely": "Most likely days",
+    "legendPossible": "Possible, less likely",
+    "includesPast": "This range includes days that already passed. Check them against your log.",
+    "save": "Save to my plans",
+    "errors": {
+      "pick": "Pick a start and an end date.",
+      "order": "The end date can not be before the start date.",
+      "tooLong": "Pick a range of 60 days or fewer.",
+      "tooFar": "Predictions reach about a year ahead.",
+      "name": "Give it a name so you can find it later.",
+      "generic": "That didn't work. Check the dates and try again."
+    },
+    "status": {
+      "learning": "Still learning",
+      "overdue": "Period is late",
+      "no_data": "No data yet",
+      "learningTitle": "Still learning your cycle",
+      "overdueTitle": "Your period is late, so we can't give honest odds right now",
+      "no_dataTitle": "We need your first period to answer this"
+    },
+    "reasons": {},
+    "horizon": {},
+    "confidence": {
+      "regular": "Your cycles are regular, so this is a fairly sharp estimate.",
+      "variable": "Your cycles vary a little, so treat this as a good guess.",
+      "irregular": "Your cycles are irregular, so this is a rough guess.",
+      "learning": "We are still learning your cycle, so this is a rough guess."
+    },
+    "events": {
+      "title": "Saved plans",
+      "empty": "Nothing saved yet. Save a trip or event and we keep its odds up to date.",
+      "past": "Past",
+      "edit": "Edit {name}"
+    },
+    "sheet": {
+      "saveTitle": "Save this plan",
+      "editTitle": "Edit plan",
+      "name": "Name",
+      "namePlaceholder": "Beach holiday",
+      "delete": "Delete plan",
+      "deleteSure": "Tap again to delete"
+    },
+    "toast": {
+      "saved": "Plan saved",
+      "updated": "Plan updated",
+      "deleted": "Plan deleted"
+    }
+  },
+  "feed": {
+    "title": "Add to your calendar",
+    "intro": "See your predicted period in Google, Apple or Outlook Calendar. It updates itself, and only the label you choose is shown.",
+    "label": "Calendar label",
+    "labelHelp": "Discreet on purpose: the default is just a moon. Anyone glancing at your calendar sees only this.",
+    "fertile": "Include fertile days",
+    "fertileHelp": "Off by default. Adds the estimated fertile window.",
+    "fertileLabel": "Fertile days label",
+    "fertileLabelPlaceholder": "🌿",
+    "estimate": "Mark as estimate",
+    "estimateHelp": "Adds \"(estimate)\" so a prediction is never mistaken for a fact.",
+    "timezone": "Time zone",
+    "create": "Create calendar link",
+    "rotate": "New link",
+    "turnOff": "Turn off",
+    "saved": "Calendar settings saved",
+    "off": "Calendar link turned off",
+    "copy": "Copy",
+    "copied": "Copied",
+    "rotateHelp": "A new link replaces the old one: calendars using the old link stop updating.",
+    "rotateTitle": "Make a new link?",
+    "rotateMessage": "The old link stops working right away. You will need to add the new one to each calendar app.",
+    "rotateConfirm": "Make new link",
+    "offTitle": "Turn off calendar link?",
+    "offMessage": "Your calendars stop updating. You can create a new link later.",
+    "urlTitle": "Your calendar link",
+    "urlOnce": "This is shown only once. Copy it now and keep it private: anyone with the link can see your dates.",
+    "how": {
+      "google": {
+        "title": "Google Calendar",
+        "steps": "On a computer, open Google Calendar. Next to “Other calendars” press +, choose “From URL”, paste the link and press “Add calendar”."
+      },
+      "apple": {
+        "title": "iPhone, iPad, Mac",
+        "steps": "iPhone: Settings, Calendar, Accounts, Add Account, Other, Add Subscribed Calendar, paste the link. Mac: Calendar app, File, New Calendar Subscription."
+      },
+      "outlook": {
+        "title": "Outlook",
+        "steps": "Open Outlook on the web. Choose Add calendar, then “Subscribe from web”, paste the link and give it a name."
+      },
+      "delay": "Calendar apps refresh subscribed calendars every few hours, so changes can take a while to show up."
+    },
+    "errors": {
+      "generic": "That didn't work. Please try again."
     }
   }
 }

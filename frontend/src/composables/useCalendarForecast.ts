@@ -14,11 +14,18 @@ export interface DayProb {
  */
 const external = ref<Record<string, Partial<DayProb>>>({});
 
+const externalCovered = ref<string | null>(null);
+
 export function setExternalDays(days: { date: string; p_bleeding?: number; p_fertile?: number }[]) {
   const next = { ...external.value };
-  for (const d of days) next[d.date] = { p_bleeding: d.p_bleeding, p_fertile: d.p_fertile };
+  for (const d of days) {
+    next[d.date] = { p_bleeding: d.p_bleeding, p_fertile: d.p_fertile };
+    if (!externalCovered.value || d.date > externalCovered.value) externalCovered.value = d.date;
+  }
   external.value = next;
 }
+/** The forecast changed (a period was logged): longer-range days fetched earlier are stale. */
+export function clearExternalDays() { external.value = {}; externalCovered.value = null; }
 
 export interface FertileDay {
   /** 0..1, how central the day is to the window (peak on the ovulation day) */
@@ -54,9 +61,14 @@ export function useCalendarForecast() {
     return m;
   });
 
-  const lastCovered = computed(() => {
+  /** last day the /forecast itself covers */
+  const forecastEnd = computed(() => {
     const ds = f.value?.days;
     return ds && ds.length ? ds[ds.length - 1].date : null;
+  });
+  const lastCovered = computed(() => {
+    const a = forecastEnd.value, b = externalCovered.value;
+    return a && b ? (a > b ? a : b) : a ?? b;
   });
   const ovulation = computed(() => (reason.value ? null : f.value?.fertile_window?.ovulation_date ?? null));
 
@@ -84,5 +96,5 @@ export function useCalendarForecast() {
     return m;
   });
 
-  return { fertileMap, forecast: f, reason, isLate, byDate, lastCovered, ovulation, prob: (iso: string) => byDate.value.get(iso) ?? null };
+  return { fertileMap, forecastEnd, forecast: f, reason, isLate, byDate, lastCovered, ovulation, prob: (iso: string) => byDate.value.get(iso) ?? null };
 }

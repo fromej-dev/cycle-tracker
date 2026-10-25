@@ -281,7 +281,8 @@
   "nav": {
     "dashboard": "Vandaag",
     "account": "Account",
-    "calendar": "Kalender"
+    "calendar": "Kalender",
+    "plan": "Plannen"
   },
   "phases": {
     "period": "Menstruatie",
@@ -321,7 +322,13 @@
     "legendForecast": "Voorspelling",
     "legendOverdue": "Te laat",
     "dayChip": "Dag {n}",
-    "legendElapsed": "Tot nu"
+    "legendElapsed": "Tot nu",
+    "secondary": "Of, als je een menstruatie niet hebt geregistreerd: rond {range} ({pct}%)",
+    "undo": {
+      "started": "Menstruatie begonnen vandaag",
+      "ended": "Menstruatie afgelopen vandaag",
+      "button": "Ongedaan maken"
+    }
   },
   "forecast": {
     "confidence": {
@@ -346,20 +353,21 @@
     "close": "Sluiten",
     "start": "Menstruatie begon deze dag",
     "end": "Menstruatie eindigde deze dag",
-    "noteForecast": "Menstruatie begint waarschijnlijk {range} ({pct}% zeker)",
+    "noteForecast": "Je menstruatie begint waarschijnlijk {range} (onderstreept, {pct}% zeker). De gekleurde dagen laten zien waar bloeding kan vallen.",
     "noteLate": "Je menstruatie is later dan gewoonlijk, dus voorspelde dagen zijn verborgen tot hij begint.",
     "noteLearning": "Log nog een paar menstruaties om voorspelde dagen te zien.",
-    "noteBeyond": "Voorspellingen reiken ongeveer zes weken vooruit, dus latere maanden blijven leeg.",
-    "notePartial": "Voorspellingen reiken ongeveer zes weken vooruit; latere dagen blijven leeg.",
+    "noteBeyond": "Voorspellingen reiken ongeveer een jaar vooruit, dus latere maanden blijven leeg.",
+    "notePartial": "Verder vooruit worden voorspellingen vager: de kleur is lichter omdat we minder zeker zijn.",
     "legend": {
       "title": "Legenda",
       "logged": "Gelogde menstruatie",
-      "predicted": "Voorspelde menstruatie",
+      "predicted": "Mogelijke bloedingsdagen",
       "fertile": "Vruchtbare dagen",
       "ovulation": "Waarschijnlijke eisprong",
       "today": "Vandaag",
       "hint": "Gestippelde vlakken zijn voorspellingen, geen registraties. Hoe lichter, hoe minder waarschijnlijk.",
-      "start": "Meest waarschijnlijke start"
+      "start": "Meest waarschijnlijke startdag",
+      "window": "Waarschijnlijke startperiode"
     },
     "facts": {
       "logged": "Gelogde menstruatiedag {n}",
@@ -380,6 +388,133 @@
     },
     "errors": {
       "generic": "Dat lukte niet. Controleer de datums en probeer opnieuw."
+    }
+  },
+  "history": {
+    "title": "Jouw cycli",
+    "seeAll": "Alles bekijken",
+    "intro": "Elke cyclus op één lijn bij dag 1, de nieuwste bovenaan. Tik op een rij voor de data.",
+    "empty": "Registreer een paar menstruaties en je cycli verschijnen hier.",
+    "average": "Gemiddelde cyclus",
+    "basedOn": "Gebaseerd op je laatste {n} cycli. De gekleurde band is jouw typische bereik.",
+    "current": "Deze cyclus, dag {n}",
+    "typical": "Typisch voor jou",
+    "short": "Korter dan gewoonlijk",
+    "long": "Langer dan gewoonlijk",
+    "gap": "Misschien niet geregistreerd",
+    "now": "vandaag",
+    "periodDays": "Menstruatie: {n} dagen",
+    "ongoingOrJust": "deze cyclus loopt nog",
+    "fertileEst": "Geschatte vruchtbare dagen: dag {a} tot {b} (een schatting uit de cycluslengte)",
+    "gapDetail": "Een tussenpoos van {n} dagen is ongeveer twee keer je gebruikelijke {usual}. Waarschijnlijk is een menstruatie niet geregistreerd, daarom telt ze niet mee in je gemiddelde.",
+    "legendPeriod": "Menstruatie",
+    "legendFertile": "Geschatte vruchtbare dagen",
+    "legendTypical": "Jouw typische bereik"
+  },
+  "plan": {
+    "eyebrow": "Plannen",
+    "title": "Ben ik ongesteld op…?",
+    "intro": "Kies een dag of reis en zie eerlijk hoe groot de kans is.",
+    "pick": "Data",
+    "from": "Van",
+    "to": "Tot",
+    "answer": {
+      "single": "kans op menstruatie op {date}",
+      "range": "kans op menstruatie op minstens één van deze {n} dagen"
+    },
+    "timelineLabel": "Kans op bloeding per dag in de periode",
+    "legendLikely": "Meest waarschijnlijke dagen",
+    "legendPossible": "Mogelijk, minder waarschijnlijk",
+    "includesPast": "Deze periode bevat dagen die al voorbij zijn. Vergelijk ze met je registraties.",
+    "save": "Bewaar in mijn plannen",
+    "errors": {
+      "pick": "Kies een begin- en einddatum.",
+      "order": "De einddatum kan niet voor de begindatum liggen.",
+      "tooLong": "Kies een periode van maximaal 60 dagen.",
+      "tooFar": "Voorspellingen reiken ongeveer een jaar vooruit.",
+      "name": "Geef het een naam zodat je het terugvindt.",
+      "generic": "Dat lukte niet. Controleer de data en probeer opnieuw."
+    },
+    "status": {
+      "learning": "Nog aan het leren",
+      "overdue": "Menstruatie is te laat",
+      "no_data": "Nog geen gegevens",
+      "learningTitle": "We leren je cyclus nog kennen",
+      "overdueTitle": "Je menstruatie is te laat, dus we kunnen nu geen eerlijke kans geven",
+      "no_dataTitle": "We hebben je eerste menstruatie nodig om dit te beantwoorden"
+    },
+    "reasons": {},
+    "horizon": {},
+    "confidence": {
+      "regular": "Je cycli zijn regelmatig, dus dit is een vrij scherpe schatting.",
+      "variable": "Je cycli variëren een beetje, zie dit als een goede gok.",
+      "irregular": "Je cycli zijn onregelmatig, dus dit is een ruwe gok.",
+      "learning": "We leren je cyclus nog kennen, dus dit is een ruwe gok."
+    },
+    "events": {
+      "title": "Bewaarde plannen",
+      "empty": "Nog niets bewaard. Bewaar een reis of afspraak en we houden de kans bij.",
+      "past": "Voorbij",
+      "edit": "{name} bewerken"
+    },
+    "sheet": {
+      "saveTitle": "Bewaar dit plan",
+      "editTitle": "Plan bewerken",
+      "name": "Naam",
+      "namePlaceholder": "Strandvakantie",
+      "delete": "Plan verwijderen",
+      "deleteSure": "Tik nogmaals om te verwijderen"
+    },
+    "toast": {
+      "saved": "Plan bewaard",
+      "updated": "Plan bijgewerkt",
+      "deleted": "Plan verwijderd"
+    }
+  },
+  "feed": {
+    "title": "Aan je agenda toevoegen",
+    "intro": "Zie je voorspelde menstruatie in Google, Apple of Outlook Agenda. Het ververst vanzelf en alleen het label dat jij kiest is zichtbaar.",
+    "label": "Agendalabel",
+    "labelHelp": "Bewust discreet: standaard is het alleen een maantje. Wie op je agenda kijkt, ziet alleen dit.",
+    "fertile": "Vruchtbare dagen toevoegen",
+    "fertileHelp": "Standaard uit. Voegt het geschatte vruchtbare venster toe.",
+    "fertileLabel": "Label voor vruchtbare dagen",
+    "fertileLabelPlaceholder": "🌿",
+    "estimate": "Markeren als schatting",
+    "estimateHelp": "Voegt \"(schatting)\" toe zodat een voorspelling nooit voor een feit wordt aangezien.",
+    "timezone": "Tijdzone",
+    "create": "Agendalink maken",
+    "rotate": "Nieuwe link",
+    "turnOff": "Uitzetten",
+    "saved": "Agenda-instellingen opgeslagen",
+    "off": "Agendalink uitgezet",
+    "copy": "Kopieer",
+    "copied": "Gekopieerd",
+    "rotateHelp": "Een nieuwe link vervangt de oude: agenda's met de oude link worden niet meer bijgewerkt.",
+    "rotateTitle": "Nieuwe link maken?",
+    "rotateMessage": "De oude link werkt meteen niet meer. Je moet de nieuwe in elke agenda-app toevoegen.",
+    "rotateConfirm": "Nieuwe link maken",
+    "offTitle": "Agendalink uitzetten?",
+    "offMessage": "Je agenda's worden niet meer bijgewerkt. Je kunt later een nieuwe link maken.",
+    "urlTitle": "Jouw agendalink",
+    "urlOnce": "Dit zie je maar één keer. Kopieer de link nu en houd hem privé: iedereen met de link ziet je data.",
+    "how": {
+      "google": {
+        "title": "Google Agenda",
+        "steps": "Open Google Agenda op een computer. Druk naast “Andere agenda's” op +, kies “Via URL”, plak de link en druk op “Agenda toevoegen”."
+      },
+      "apple": {
+        "title": "iPhone, iPad, Mac",
+        "steps": "iPhone: Instellingen, Agenda, Accounts, Voeg account toe, Andere, Voeg agenda-abonnement toe, plak de link. Mac: Agenda-app, Archief, Nieuw agenda-abonnement."
+      },
+      "outlook": {
+        "title": "Outlook",
+        "steps": "Open Outlook op het web. Kies Agenda toevoegen, dan “Abonneren vanaf web”, plak de link en geef een naam."
+      },
+      "delay": "Agenda-apps verversen geabonneerde agenda's om de paar uur, dus wijzigingen kunnen even duren."
+    },
+    "errors": {
+      "generic": "Dat lukte niet. Probeer het opnieuw."
     }
   }
 }

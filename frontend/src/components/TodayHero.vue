@@ -9,6 +9,7 @@ import { differenceInCalendarDays, parseISO, startOfDay, subDays, formatISO, isV
 import CycleRing from '@/components/CycleRing.vue';
 import { useReportsStore } from '@/stores/reports';
 import { usePeriodsStore } from '@/stores/periods';
+import { showUndo } from '@/composables/useUndo';
 import { formatDay, formatBetween, formatShort } from '@/utils/formatDate';
 
 const { t, locale } = useI18n();
@@ -83,11 +84,15 @@ const fertile = computed(() => (isLate.value || isEmpty.value ? null : fertileRa
 const ovulationIdx = computed(() => idxOf(f.value?.fertile_window?.ovulation_date ?? ctx.value?.ovulation_date));
 const fertilePast = computed(() => !!fertile.value && fertile.value.end < todayIdx.value);
 
+// The bubbles and the bracket must tell the same story: when the 80% range is bracketed, bubbles stay inside it
+// (the thin tails outside would otherwise start before the bracket and read as a different prediction).
 const forecastDays = computed(() =>
   (f.value?.days ?? [])
     .map((d) => ({ idx: idxOf(d.date) as number, p: d.p_start }))
-    .filter((d) => d.idx !== null),
+    .filter((d) => d.idx !== null)
+    .filter((d) => !bracketed.value || (d.idx >= (r80StartIdx.value as number) && d.idx <= (r80EndIdx.value as number))),
 );
+const bracketed = computed(() => r80StartIdx.value !== null && r80EndIdx.value !== null && r80EndIdx.value - r80StartIdx.value <= 9 && !isLate.value);
 const hasForecast = computed(() => !!f.value?.interval_80 && forecastDays.value.length > 0 && !isOngoing.value);
 
 const overdue = computed(() => (isLate.value && todayIdx.value > baseLength.value ? { start: baseLength.value, end: todayIdx.value } : null));
@@ -104,6 +109,16 @@ const rangeSpan = computed(() => {
 // ---- words: the hero answers "when?" ----
 const dateLine = computed(() => t('today.dateLine', { date: formatDay(today, locale.value) }));
 
+// A late period can also mean a forgotten log: say so in one honest line, and when that reading is the
+// likelier one the headline must not sound certain.
+const secondary = computed(() => {
+  const sw = f.value?.secondary_window;
+  if (!sw || isOngoing.value) return null;
+  const bt = formatBetween(sw.start, sw.end, locale.value);
+  if (!bt) return null;
+  return { text: t('today.secondary', { range: sw.start === sw.end ? formatShort(sw.end, locale.value) : `${bt.a}–${bt.b}`, pct: Math.round(sw.probability * 100) }), likely: sw.probability >= 0.5 };
+});
+
 const hero = computed(() => {
   if (isOngoing.value) return t('today.periodDayN', { n: dayNumber.value });
   if (isLate.value) return t('today.daysLate', { count: daysLate.value }, daysLate.value);
@@ -112,6 +127,7 @@ const hero = computed(() => {
     const b = Math.max(0, r80EndIdx.value - todayIdx.value);
     const ml = Math.max(0, (mostLikelyIdx.value ?? r80StartIdx.value) - todayIdx.value);
     if (b === 0) return t('today.periodAnyDay');
+    if (secondary.value?.likely) return t('today.periodInAbout', { n: ml });
     if (b - a > 7) return t('today.periodInAbout', { n: ml });
     if (a === b) return t('today.periodInN', { n: a }, a);
     if (a === 0) return t('today.periodWithin', { n: b });
@@ -140,10 +156,18 @@ defineExpose({ isLate });
 const buttonText = computed(() => (isOngoing.value ? t('periodForm.endCurrent.button') : t('periodForm.recordNew.button')));
 const busy = computed(() => periodsStore.loading);
 
+// One tap, no confirmation dialog: the action happens at once and an undo toast offers to take it back.
 async function act() {
-  if (isEmpty.value) return periodsStore.startPeriodToday();
-  if (isOngoing.value && latest.value) return periodsStore.updatePeriod(latest.value.id, todayISO);
-  return periodsStore.createPeriod(todayISO);
+  if (isEmpty.value || !isOngoing.value) {
+    const p = await (isEmpty.value ? periodsStore.startPeriodToday() : periodsStore.createPeriod(todayISO));
+    if (p) showUndo(t('today.undo.started'), t('today.undo.button'), () => periodsStore.deletePeriod(p.id));
+    return;
+  }
+  if (latest.value) {
+    const id = latest.value.id;
+    const r = await periodsStore.updatePeriod(id, todayISO);
+    if (r) showUndo(t('today.undo.ended'), t('today.undo.button'), async () => { await periodsStore.reopenPeriod(id); });
+  }
 }
 </script>
 
@@ -170,6 +194,7 @@ async function act() {
         <p class="text-[0.8125rem] text-ink-soft">{{ dateLine }}</p>
         <h1 id="today-title" class="hero-line mt-2">{{ hero }}</h1>
         <p v-if="sub" class="mt-2.5 text-[0.9375rem] leading-snug text-ink text-balance">{{ sub }}</p>
+        <p v-if="secondary" class="mt-1.5 text-[0.8125rem] leading-snug text-ink-soft text-balance">{{ secondary.text }}</p>
         <p v-if="sub2" class="mt-1.5 text-[0.8125rem] leading-snug text-ink-soft text-balance">{{ sub2 }}</p>
       </template>
     </CycleRing>

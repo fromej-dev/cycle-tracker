@@ -19,6 +19,10 @@ interface Props {
   projected?: boolean;
   ovulation?: boolean;
   likelyStart?: boolean;
+  /** inside the 80% window for the period START: drawn as an underline that joins neighbouring days */
+  /** beyond the ~45-day forecast: probabilities are spread thin, so only the clearer days are drawn */
+  far?: boolean;
+  startWin?: 'only' | 'first' | 'mid' | 'last' | null;
   today?: boolean;
   selected?: boolean;
   label?: string;
@@ -26,10 +30,11 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), { pBleeding: 0, fertile: 0 });
 
 // Below this a day is not drawn at all: a faint smear across two weeks reads as a 12-day period.
-const MIN = 0.18;
+const MIN_NEAR = 0.18;
+const MIN_FAR = 0.3;
 const kind = computed(() => {
   if (props.logged) return 'logged';
-  if (props.pBleeding >= MIN) return 'predicted';
+  if (props.pBleeding >= (props.far ? MIN_FAR : MIN_NEAR)) return 'predicted';
   if (props.fertile > 0) return 'fertile';
   return 'none';
 });
@@ -52,6 +57,7 @@ const style = computed(() => ({ '--s': strength.value.toFixed(3) }));
       :aria-current="today ? 'date' : undefined"
   >
     <span class="mark" aria-hidden="true"></span>
+    <span v-if="startWin" class="swin" :class="`w-${startWin}`" aria-hidden="true"></span>
     <span v-if="today" class="today-ring" aria-hidden="true"></span>
     <span class="num" :class="{ lifted: ovulation || (likelyStart && !logged) }">{{ day }}</span>
     <span v-if="ovulation" class="ov" aria-hidden="true"></span>
@@ -75,15 +81,19 @@ const style = computed(() => ({ '--s': strength.value.toFixed(3) }));
   border: 1.5px dashed color-mix(in srgb, var(--color-period) calc(var(--edge-t0) + 50% * var(--s)), transparent);
 }
 .k-fertile .mark {
-  background: color-mix(in srgb, var(--color-fertile) calc(var(--tile-t0) + var(--tile-t1) * var(--s)), var(--color-surface));
+  background: color-mix(in srgb, var(--color-fertile) calc(var(--ftile-t0) + var(--ftile-t1) * var(--s)), var(--fertile-base));
   border: 1.5px solid color-mix(in srgb, var(--color-fertile) calc(var(--edge-t0) + 40% * var(--s)), transparent);
 }
+.k-fertile .num { color: var(--color-fertile-ink); }
 .k-fertile.is-proj .mark { border-style: dotted; }
-.k-fertile.is-ov .mark { border: 2px solid var(--color-fertile); background: color-mix(in srgb, var(--color-fertile) calc(var(--tile-t0) + var(--tile-t1)), var(--color-surface)); }
+.k-fertile.is-ov .mark { border: 2px solid var(--color-fertile); background: color-mix(in srgb, var(--color-fertile) calc(var(--ftile-t0) + var(--ftile-t1)), var(--fertile-base)); }
 /* ovulation: a real marker, a ring under the number */
 .ov { position: absolute; z-index: 2; bottom: 0.5rem; width: 0.6875rem; height: 0.6875rem; border-radius: 9999px; border: 2px solid var(--color-fertile); background: var(--color-surface); }
 .start-dot { position: absolute; z-index: 2; bottom: 0.5rem; width: 0.375rem; height: 0.375rem; border-radius: 9999px; background: var(--color-period); }
 
+.swin { position: absolute; z-index: 2; bottom: 0.125rem; height: 3px; left: 0; right: 0; background: var(--color-period); }
+.swin.w-only, .swin.w-first { left: 0.5rem; border-top-left-radius: 9999px; border-bottom-left-radius: 9999px; }
+.swin.w-only, .swin.w-last { right: 0.5rem; border-top-right-radius: 9999px; border-bottom-right-radius: 9999px; }
 .today-ring { position: absolute; inset: 0.375rem 0.1875rem; border-radius: 0.875rem; border: 2px solid var(--color-ink); z-index: 1; }
 .k-logged .today-ring { inset: 0.375rem 0; border-radius: 9999px; outline: 2px solid var(--color-ink); outline-offset: 1.5px; border: 0; }
 .is-today .mark { border-color: transparent; }

@@ -96,6 +96,10 @@
     --tile-t0: 7%;
     --tile-t1: 32%;
     --edge-t0: 30%;
+    /* fertile tiles: light mixes into the surface; dark mixes into the deep sage so it stays green, not grey-mud */
+    --fertile-base: var(--color-surface);
+    --ftile-t0: var(--tile-t0);
+    --ftile-t1: var(--tile-t1);
     --shadow-card: 0 1px 2px rgb(60 30 50 / 0.04), 0 8px 24px -12px rgb(60 30 50 / 0.12);
     --shadow-nav: 0 -1px 0 rgb(60 30 50 / 0.04), 0 -12px 28px -16px rgb(60 30 50 / 0.18);
 }
@@ -139,6 +143,9 @@
         --tile-t0: 18%;
         --tile-t1: 36%;
         --edge-t0: 45%;
+        --fertile-base: var(--color-fertile-soft);
+        --ftile-t0: 8%;
+        --ftile-t1: 26%;
         --shadow-card: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 10px 28px -14px rgb(0 0 0 / 0.6);
         --shadow-nav: 0 -1px 0 rgb(255 255 255 / 0.04), 0 -12px 28px -16px rgb(0 0 0 / 0.7);
     }
@@ -253,7 +260,7 @@
 .animation-delay-600 { animation-delay: 0.6s; }
 @media (prefers-reduced-motion: reduce) {
     .animate-fade-in-up { animation: none; opacity: 1; }
-    * { transition-duration: 0.01ms !important; }
+    *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
 }
 
 .hero-section { --navbar-height: 64px; }

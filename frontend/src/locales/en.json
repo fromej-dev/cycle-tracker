@@ -236,7 +236,11 @@
       "dueToday": "Due today",
       "overdue": "overdue"
     },
-    "periodStarted": "Period started:"
+    "periodStarted": "Period started:",
+    "eyebrowPeriod": "Current period",
+    "eyebrowNext": "Next period",
+    "eyebrowLate": "Period late",
+    "predictedHint": "Estimated from your past cycles"
   },
   "periodList": {
     "duration": "Duration:",
@@ -258,7 +262,11 @@
   },
   "theme": {
     "switchToDark": "Switch to dark mode",
-    "switchToLight": "Switch to light mode"
+    "switchToLight": "Switch to light mode",
+    "title": "Appearance",
+    "description": "Choose a light or dark look. Your choice stays on this device.",
+    "light": "Light",
+    "dark": "Dark"
   },
   "toast": {
     "periodCreated": "Period recorded successfully",
@@ -267,5 +275,16 @@
     "passwordChanged": "Password changed successfully",
     "accountDeleted": "Account deleted successfully",
     "settingsUpdated": "Settings updated successfully"
+  },
+  "nav": {
+    "dashboard": "Today",
+    "account": "Account"
+  },
+  "phases": {
+    "period": "Period",
+    "fertile": "Fertile",
+    "luteal": "Other days",
+    "predicted": "Predicted",
+    "estimated": "Estimate"
   }
 }

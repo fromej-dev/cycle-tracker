@@ -2,31 +2,31 @@
   <Transition name="modal-fade">
     <div
         v-if="modelValue"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 p-4"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
         @click.self="handleCancel"
         role="dialog"
         aria-modal="true"
         :aria-labelledby="modalTitleId"
         :aria-describedby="modalDescriptionId"
     >
-      <div class="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-200">
-          <h3 :id="modalTitleId" class="text-lg font-semibold text-gray-800">
+      <div class="bg-surface rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+        <div class="px-6 py-4 border-b border-line">
+          <h3 :id="modalTitleId" class="text-lg font-semibold text-ink">
             <slot name="title">{{ title }}</slot>
           </h3>
         </div>
 
         <div class="px-6 py-5">
-          <p :id="modalDescriptionId" class="text-sm text-gray-600">
+          <p :id="modalDescriptionId" class="text-sm text-ink-soft">
             <slot name="message">{{ message }}</slot>
           </p>
         </div>
 
-        <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
+        <div class="px-6 py-4 bg-surface-muted border-t border-line flex justify-end space-x-3">
           <button
               @click="handleCancel"
               type="button"
-              class="px-4 py-2 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              class="px-4 py-2 rounded-xl border border-line-strong bg-surface text-sm font-medium text-ink-soft hover:bg-surface-muted focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
           >
             {{ cancelText }}
           </button>
@@ -34,7 +34,7 @@
               @click="handleConfirm"
               type="button"
               :class="[
-              'px-4 py-2 rounded-md border border-transparent text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2',
+              'px-4 py-2 rounded-xl border border-transparent text-sm font-medium shadow-card focus:outline-none focus:ring-2 focus:ring-offset-2',
               confirmButtonClass // Apply dynamic styling based on type
             ]"
           >
@@ -96,15 +96,15 @@ const modalDescriptionId = `${modalId}-description`;
 const confirmButtonClass = computed(() => {
   switch (props.confirmButtonType) {
     case 'danger':
-      return 'bg-red-600 hover:bg-red-700 focus:ring-red-500';
+      return 'bg-danger text-surface hover:brightness-90 focus:ring-danger';
     case 'warning':
-      return 'bg-yellow-500 hover:bg-yellow-600 focus:ring-yellow-400 text-black'; // Adjusted for yellow
+      return 'bg-luteal text-on-phase hover:brightness-90 focus:ring-luteal';
     case 'primary':
     default:
       // Assuming 'primary' is defined in your Tailwind config or global styles
       // Fallback to a common blue/indigo if not
-      return 'bg-primary hover:bg-secondary focus:ring-primary disabled:opacity-50'; // Use your primary/secondary colors
-      // return 'bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500'; // Alternative default
+      return 'bg-primary text-on-primary hover:bg-primary-hover focus:ring-primary disabled:opacity-50'; // Use your primary/secondary colors
+      // return 'bg-indigo-600 hover:bg-indigo-700 focus:ring-primary'; // Alternative default
   }
 });
 
@@ -174,12 +174,12 @@ onUnmounted(() => {
 }
 
 /* Optional: Add a subtle scale effect */
-.modal-fade-enter-active .bg-white,
-.modal-fade-leave-active .bg-white {
+.modal-fade-enter-active .bg-surface,
+.modal-fade-leave-active .bg-surface {
   transition: all 0.3s ease;
 }
-.modal-fade-enter-from .bg-white,
-.modal-fade-leave-to .bg-white {
+.modal-fade-enter-from .bg-surface,
+.modal-fade-leave-to .bg-surface {
   transform: scale(0.95);
   opacity: 0;
 }

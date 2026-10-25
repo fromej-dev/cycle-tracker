@@ -5,17 +5,17 @@
       name="Period Tracker"
       description="Track your cycle and gain insights into your health."
       icon="/assets/icons/ios/512.png"/>
-  <div id="app" class="h-screen flex overflow-hidden">
+  <div id="app" class="h-dvh flex overflow-hidden bg-background text-ink">
 
     <Navigation
         :is-mobile="isMobile"
         :is-authenticated="authStore.isAuthenticated"
     />
 
-    <div class="flex-1 flex flex-col overflow-hidden">
+    <div class="flex-1 flex flex-col overflow-hidden min-w-0">
       <main
-          class="flex-1 overflow-y-auto bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-100"
-          :class="{ 'pb-16': isMobile && authStore.isAuthenticated }"
+          class="flex-1 overflow-y-auto bg-background"
+          :class="{ 'pb-nav': isMobile && authStore.isAuthenticated }"
       >
       <RouterView />
       </main>
@@ -26,7 +26,6 @@
 
 <script setup lang="ts">
 import { RouterView } from 'vue-router';
-import Navbar from '@/components/Navbar.vue';
 import Navigation from '@/components/Navigation.vue';
 import "@khmyznikov/pwa-install";
 import { useTemplateRef } from "vue";
@@ -39,7 +38,8 @@ const pwaInstall = useTemplateRef('pwa-install');
 </script>
 
 <style scoped>
-.pb-16 {
-  padding-bottom: 4rem;
+/* room for the fixed bottom navigation + iOS home indicator */
+.pb-nav {
+  padding-bottom: calc(4.75rem + env(safe-area-inset-bottom));
 }
 </style>

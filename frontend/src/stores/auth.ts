@@ -113,8 +113,8 @@ export const useAuthStore = defineStore<'auth', AuthState, AuthGetters, AuthActi
             if (token && refreshTokenVal) {
                 this.token = token;
                 this.refreshToken = refreshTokenVal;
+                // Stay on the current route (the router guard sends guests-only pages to the dashboard)
                 await this.fetchUser();
-                router.push({name: 'dashboard'})
             } else {
                 // If one is missing, clear both for consistency
                 this.token = null;

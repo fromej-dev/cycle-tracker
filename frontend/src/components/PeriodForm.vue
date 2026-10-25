@@ -3,9 +3,10 @@ import {ref, computed, onMounted} from 'vue';
 import { usePeriodsStore } from '@/stores/periods';
 import getTodayDateString from "@/utils/dateUtils.ts";
 import { useI18n } from 'vue-i18n';
+import { formatDay } from '@/utils/formatDate';
 import { useToast } from '@/composables/useToast';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const toast = useToast();
 
 const periodsStore = usePeriodsStore();
@@ -62,15 +63,15 @@ onMounted(() => {
 <template>
   <div class="space-y-6">
     <div>
-      <h3 class="text-lg font-semibold text-primary mb-4">{{ $t('periodForm.recordNew.title') }}</h3>
+      <h3 class="section-title mb-4">{{ $t('periodForm.recordNew.title') }}</h3>
       <div class="flex flex-col sm:flex-row sm:items-end sm:gap-4 space-y-3 sm:space-y-0">
         <div class="flex-grow">
-          <label for="start_date" class="block text-sm font-medium text-gray-600 mb-1.5">{{ $t('periodForm.recordNew.startDateLabel') }}</label>
+          <label for="start_date" class="block text-sm font-medium text-ink-soft mb-1.5">{{ $t('periodForm.recordNew.startDateLabel') }}</label>
           <input
               type="date"
               id="start_date"
               v-model="newPeriodStartDate"
-              class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 py-2 px-3 text-gray-700 leading-tight"
+              class="block w-full"
               :max="getTodayDateString()"
           />
         </div>
@@ -84,20 +85,20 @@ onMounted(() => {
       </div>
     </div>
 
-    <div v-if="currentOpenPeriod" class="border-t border-gray-100 pt-6">
-      <h3 class="text-lg font-semibold text-primary mb-4">{{ $t('periodForm.endCurrent.title') }}</h3>
-      <p class="text-sm text-gray-600 mb-4">
+    <div v-if="currentOpenPeriod" class="border-t border-line pt-6">
+      <h3 class="section-title mb-4">{{ $t('periodForm.endCurrent.title') }}</h3>
+      <p class="text-sm text-ink-soft mb-4">
         {{ $t('periodForm.endCurrent.startedOnPrefix') }}
-        <span class="font-medium text-gray-700">{{ currentOpenPeriod.start_date }}</span>
+        <span class="font-medium text-ink">{{ formatDay(currentOpenPeriod.start_date, locale) }}</span>
       </p>
       <div class="flex flex-col sm:flex-row sm:items-end sm:gap-4 space-y-3 sm:space-y-0">
         <div class="flex-grow">
-          <label for="end_date" class="block text-sm font-medium text-gray-600 mb-1.5">{{ $t('periodForm.endCurrent.endDateLabel') }}</label>
+          <label for="end_date" class="block text-sm font-medium text-ink-soft mb-1.5">{{ $t('periodForm.endCurrent.endDateLabel') }}</label>
           <input
               type="date"
               id="end_date"
               v-model="currentPeriodEndDate"
-              class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 py-2 px-3 text-gray-700 leading-tight"
+              class="block w-full"
               :min="currentOpenPeriod.start_date"
               :max="getTodayDateString()"
           />
@@ -112,7 +113,7 @@ onMounted(() => {
       </div>
     </div>
 
-    <div v-if="periodsStore.error" class="mt-4 p-4 bg-red-50 border border-red-200 text-red-700 text-sm rounded-md" role="alert">
+    <div v-if="periodsStore.error" class="mt-4 p-4 bg-danger-soft border border-danger text-danger text-sm rounded-md" role="alert">
       {{ periodsStore.error }}
     </div>
   </div>

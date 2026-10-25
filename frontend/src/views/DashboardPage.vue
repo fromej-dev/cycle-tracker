@@ -1,29 +1,29 @@
 <template>
-  <div class="dashboard container mx-auto space-y-8">
+  <div class="dashboard mx-auto max-w-5xl">
 
     <div v-if="reportsStore.loading" class="text-center py-12">
       <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      <p class="mt-4 text-gray-600">{{ $t('dashboard.loader.message') }}</p>
+      <p class="mt-4 text-ink-soft">{{ $t('dashboard.loader.message') }}</p>
     </div>
 
-    <div v-else-if="reportsStore.error" class="bg-red-100 border-l-4 border-red-500 text-red-700 p-6 rounded-xl shadow-sm" role="alert">
+    <div v-else-if="reportsStore.error" class="bg-danger-soft border border-danger text-danger-ink p-6 m-4 rounded-3xl" role="alert">
       <p class="font-bold">{{ $t('dashboard.error.title') }}</p>
       <p>{{ reportsStore.error }} {{ $t('dashboard.error.refreshHint') }}</p>
     </div>
 
-    <div v-else class="px-4 py-8 flex flex-col gap-4">
+    <div v-else class="px-5 pt-8 pb-8 sm:px-8 flex flex-col gap-10">
 
-      <div v-if="reportsStore.periodStats?.count === 0" class="bg-gradient-to-r from-primary to-secondary text-white p-8 rounded-xl shadow-lg text-center">
-        <h2 class="text-3xl font-semibold mb-3 font-serif">{{ $t('dashboard.newUser.title') }}</h2>
-        <p class="text-lg text-indigo-50 mb-6 max-w-xl mx-auto">{{ $t('dashboard.newUser.subtitle') }}</p>
-        <svg class="h-10 w-10 mx-auto text-white opacity-80 mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-        <button @click="periodStore.startPeriodToday" class="btn btn-white">
+      <div v-if="reportsStore.periodStats?.count === 0" class="card p-8 text-center">
+        <h2 class="page-title mb-3">{{ $t('dashboard.newUser.title') }}</h2>
+        <p class="text-lg text-ink-soft mb-6 max-w-xl mx-auto">{{ $t('dashboard.newUser.subtitle') }}</p>
+        <svg class="h-8 w-8 mx-auto text-primary mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+        <button @click="periodStore.startPeriodToday" class="btn btn-primary">
           {{ $t('dashboard.newUser.button') }}
         </button>
       </div>
 
       <section v-if="reportsStore.periodStats?.count > 0" aria-labelledby="current-cycle-heading">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <StatusCard/>
           <FertileWindowCard
               :fertile-start="reportsStore.cycleContext?.fertile_window?.start"
@@ -36,51 +36,46 @@
       </section>
 
       <section v-if="reportsStore.periodStats?.count > 0" aria-labelledby="insights-heading">
-        <h2 id="insights-heading" class="text-2xl font-semibold text-gray-800 mb-5 font-serif">{{ $t('dashboard.sections.insights.title') }}</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <h2 id="insights-heading" class="section-title mb-4">{{ $t('dashboard.sections.insights.title') }}</h2>
+        <div class="card p-6 grid grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-7">
           <StatsCard
-              class="dashboard-card stats-card"
-              :title="t('dashboard.insightsCards.averagePeriodDuration')"
+                            :title="t('dashboard.insightsCards.averagePeriodDuration')"
               :value="reportsStore.periodStats?.average_duration"
               decimals="1"
               :unit="t('common.day',reportsStore.periodStats?.average_duration)"
               :description="t('dashboard.insightsDescriptions.averagePeriodDuration')" />
           <StatsCard
-              class="dashboard-card stats-card"
-              :title="t('dashboard.insightsCards.averageCycleLength')"
+                            :title="t('dashboard.insightsCards.averageCycleLength')"
               :value="reportsStore.cycleContext?.cycle_length"
               :unit="t('common.day',reportsStore.cycleContext?.cycle_length)"
               :description="t('dashboard.insightsDescriptions.averageCycleLength')" />
           <StatsCard
-              class="dashboard-card stats-card"
-              :title="t('dashboard.insightsCards.totalPeriodsLogged')"
+                            :title="t('dashboard.insightsCards.totalPeriodsLogged')"
               :value="reportsStore.periodStats?.count"
               :description="t('dashboard.insightsDescriptions.totalPeriodsLogged')" />
           <StatsCard
-              class="dashboard-card stats-card"
-              :title="t('dashboard.insightsCards.longestPeriod')"
+                            :title="t('dashboard.insightsCards.longestPeriod')"
               :value="reportsStore.periodStats?.max_duration"
               :unit="t('common.day',reportsStore.periodStats?.max_duration)"
               :description="t('dashboard.insightsDescriptions.longestPeriod')" />
           <StatsCard
-              class="dashboard-card stats-card"
-              :title="t('dashboard.insightsCards.shortestPeriod')"
+                            :title="t('dashboard.insightsCards.shortestPeriod')"
               :value="reportsStore.periodStats?.min_duration"
               :unit="t('common.day',reportsStore.periodStats?.min_duration)"
               :description="t('dashboard.insightsDescriptions.shortestPeriod')" />
         </div>
       </section>
 
-      <section id="record-period-section" class="grid grid-cols-1 lg:grid-cols-2 gap-8" aria-labelledby="log-history-heading">
+      <section id="record-period-section" class="grid grid-cols-1 lg:grid-cols-2 gap-10" aria-labelledby="log-history-heading">
         <div>
-          <h2 id="log-history-heading" class="text-2xl font-semibold text-gray-800 mb-5 font-serif">{{ $t('dashboard.sections.logHistory.recordTitle') }}</h2>
-          <div class="dashboard-card bg-white p-6">
+          <h2 id="log-history-heading" class="section-title mb-4">{{ $t('dashboard.sections.logHistory.recordTitle') }}</h2>
+          <div class="card p-6">
             <PeriodForm />
           </div>
         </div>
         <div v-if="reportsStore.periodStats?.count > 0">
-          <h2 class="text-2xl font-semibold text-gray-800 mb-5 font-serif">{{ $t('dashboard.sections.logHistory.historyTitle') }}</h2>
-          <div class="dashboard-card bg-white p-6">
+          <h2 class="section-title mb-4">{{ $t('dashboard.sections.logHistory.historyTitle') }}</h2>
+          <div class="card p-6">
             <PeriodList/>
           </div>
         </div>

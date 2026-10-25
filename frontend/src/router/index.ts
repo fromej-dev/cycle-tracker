@@ -12,7 +12,8 @@ const routes: Array<RouteRecordRaw> = [
     {
         path: '/',
         name: 'home',
-        component: HomePage
+        component: HomePage,
+        meta: { requiresGuest: true } as { requiresGuest: boolean }
     },
     {
         path: '/login',

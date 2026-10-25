@@ -1,56 +1,56 @@
 <template>
-  <div class="container mx-auto px-4 py-8">
-    <div class="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-md space-y-8">
+  <div class="px-5 pt-8 pb-8 sm:px-8">
+    <div class="max-w-2xl mx-auto space-y-6">
 
-      <header class="bg-primary text-white p-4 rounded-lg flex justify-between">
-        <h2 class="text-3xl font-bold">{{ $t('accountPage.title') }}</h2>
-        <LanguagePicker/>
+      <header class="flex items-center justify-between gap-4">
+        <h1 class="page-title">{{ $t('accountPage.title') }}</h1>
+        <div class="text-ink-soft"><LanguagePicker/></div>
       </header>
       <!-- User Info Section with Inline Edit -->
-      <section aria-labelledby="user-info-heading">
-        <h3 id="user-info-heading" class="text-xl font-semibold text-gray-700 border-b pb-2 mb-4">{{ $t('accountPage.userInfo.title') }}</h3>
-        <div v-if="authStore.loading && !authStore.user" class="text-center text-gray-500">
+      <section aria-labelledby="user-info-heading" class="card p-6">
+        <h3 id="user-info-heading" class="section-title mb-4">{{ $t('accountPage.userInfo.title') }}</h3>
+        <div v-if="authStore.loading && !authStore.user" class="text-center text-ink-soft">
           {{ $t('accountPage.userInfo.loading') }}
         </div>
         <div v-else-if="authStore.user" class="space-y-3">
           <!-- Username Inline Edit -->
           <div>
-            <span class="font-medium text-gray-600">{{ $t('accountPage.userInfo.username') }}</span>
+            <span class="font-medium text-ink-soft">{{ $t('accountPage.userInfo.username') }}</span>
             <span v-if="!editState.username">
-  <span class="ml-2 text-gray-800">{{ authStore.user.username || $t('common.notAvailable') }}</span>
+  <span class="ml-2 text-ink">{{ authStore.user.username || $t('common.notAvailable') }}</span>
   <button @click="editState.username = true; editForm.username = authStore.user.username"
-          class="ml-2 text-blue-600 hover:text-blue-800">
+          class="ml-2 text-primary hover:text-primary">
     <PencilSquareIcon class="h-4 w-4 inline"/>
   </button>
 </span>
             <span v-else>
   <input
       v-model="editForm.username"
-      class="ml-2 border rounded px-2 py-0.5 text-gray-800"
+      class="ml-2 !py-1 !px-2.5 !rounded-lg"
       :disabled="editLoading"
   />
   <button @click="saveField('username')" :disabled="editLoading || !editForm.username"
-          class="ml-2 text-green-600 hover:text-green-800">
+          class="ml-2 text-success-ink hover:text-success-ink">
     <CheckIcon class="h-4 w-4 inline"/>
   </button>
   <button @click="cancelEdit('username')" :disabled="editLoading"
-          class="ml-1 text-gray-500 hover:text-gray-700">
+          class="ml-1 text-ink-soft hover:text-ink-soft">
     <XMarkIcon class="h-4 w-4 inline"/>
   </button>
-  <span v-if="editLoading" class="ml-2 text-xs text-gray-400">...</span>
-  <span v-if="editError.username" class="ml-2 text-xs text-red-500">{{ editError.username }}</span>
-  <span v-else-if="editSuccess.username" class="ml-2 text-xs text-green-600">
+  <span v-if="editLoading" class="ml-2 text-xs text-ink-soft">...</span>
+  <span v-if="editError.username" class="ml-2 text-xs text-danger">{{ editError.username }}</span>
+  <span v-else-if="editSuccess.username" class="ml-2 text-xs text-success-ink">
     <CheckCircleIcon class="h-4 w-4 inline"/>
   </span>
 </span>
           </div>
           <!-- Email Inline Edit -->
           <div>
-            <span class="font-medium text-gray-600">{{ $t('accountPage.userInfo.email') }}</span>
+            <span class="font-medium text-ink-soft">{{ $t('accountPage.userInfo.email') }}</span>
             <span v-if="!editState.email">
-  <span class="ml-2 text-gray-800">{{ authStore.user.email || $t('common.notAvailable') }}</span>
+  <span class="ml-2 text-ink">{{ authStore.user.email || $t('common.notAvailable') }}</span>
   <button @click="editState.email = true; editForm.email = authStore.user.email"
-          class="ml-2 text-blue-600 hover:text-blue-800">
+          class="ml-2 text-primary hover:text-primary">
     <PencilSquareIcon class="h-4 w-4 inline"/>
   </button>
 </span>
@@ -58,105 +58,120 @@
   <input
       v-model="editForm.email"
       type="email"
-      class="ml-2 border rounded px-2 py-0.5 text-gray-800"
+      class="ml-2 !py-1 !px-2.5 !rounded-lg"
       :disabled="editLoading"
   />
   <button @click="saveField('email')" :disabled="editLoading || !editForm.email"
-          class="ml-2 text-green-600 hover:text-green-800">
+          class="ml-2 text-success-ink hover:text-success-ink">
     <CheckIcon class="h-4 w-4 inline"/>
   </button>
   <button @click="cancelEdit('email')" :disabled="editLoading"
-          class="ml-1 text-gray-500 hover:text-gray-700">
+          class="ml-1 text-ink-soft hover:text-ink-soft">
     <XMarkIcon class="h-4 w-4 inline"/>
   </button>
-  <span v-if="editLoading" class="ml-2 text-xs text-gray-400">...</span>
-  <span v-if="editError.email" class="ml-2 text-xs text-red-500">{{ editError.email }}</span>
-  <span v-else-if="editSuccess.email" class="ml-2 text-xs text-green-600">
+  <span v-if="editLoading" class="ml-2 text-xs text-ink-soft">...</span>
+  <span v-if="editError.email" class="ml-2 text-xs text-danger">{{ editError.email }}</span>
+  <span v-else-if="editSuccess.email" class="ml-2 text-xs text-success-ink">
     <CheckCircleIcon class="h-4 w-4 inline"/>
   </span>
 </span>
           </div>
           <div>
-            <span class="font-medium text-gray-600">{{ $t('accountPage.userInfo.memberSince') }}</span>
-            <span class="ml-2 text-gray-800">{{ formattedJoinDate }}</span>
+            <span class="font-medium text-ink-soft">{{ $t('accountPage.userInfo.memberSince') }}</span>
+            <span class="ml-2 text-ink">{{ formattedJoinDate }}</span>
           </div>
         </div>
-        <div v-else class="text-center text-red-500">
+        <div v-else class="text-center text-danger">
           {{ $t('accountPage.userInfo.error') }}
         </div>
       </section>
 
-      <section aria-labelledby="change-password-heading">
-        <h3 id="change-password-heading" class="text-xl font-semibold text-gray-700 border-b pb-2 mb-4">
+      <section aria-labelledby="appearance-heading" class="card p-6">
+        <h3 id="appearance-heading" class="section-title mb-1">{{ $t('theme.title') }}</h3>
+        <p class="text-ink-soft text-sm mb-4">{{ $t('theme.description') }}</p>
+        <div class="inline-flex p-1 rounded-full bg-surface-muted" role="group">
+          <button type="button" @click="isDark = false" :aria-pressed="!isDark"
+                  :class="['flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors', !isDark ? 'bg-primary-soft text-primary' : 'text-ink-soft']">
+            <SunIcon class="h-4 w-4"/> {{ $t('theme.light') }}
+          </button>
+          <button type="button" @click="isDark = true" :aria-pressed="isDark"
+                  :class="['flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors', isDark ? 'bg-primary-soft text-primary' : 'text-ink-soft']">
+            <MoonIcon class="h-4 w-4"/> {{ $t('theme.dark') }}
+          </button>
+        </div>
+      </section>
+
+      <section aria-labelledby="change-password-heading" class="card p-6">
+        <h3 id="change-password-heading" class="section-title mb-4">
           {{ $t('accountPage.changePassword.title') }}</h3>
         <form @submit.prevent="handleChangePassword" class="space-y-4">
           <div>
-            <label for="currentPassword" class="block text-gray-700 text-sm font-bold mb-2">{{ $t('accountPage.changePassword.currentPasswordLabel') }}</label>
+            <label for="currentPassword" class="block text-ink-soft text-sm font-medium mb-1.5">{{ $t('accountPage.changePassword.currentPasswordLabel') }}</label>
             <input
                 type="password"
                 id="currentPassword"
                 v-model="passwordData.currentPassword"
                 required
-                class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                class="w-full"
                 autocomplete="current-password"
             >
           </div>
           <div>
-            <label for="newPassword" class="block text-gray-700 text-sm font-bold mb-2">{{ $t('accountPage.changePassword.newPasswordLabel') }}</label>
+            <label for="newPassword" class="block text-ink-soft text-sm font-medium mb-1.5">{{ $t('accountPage.changePassword.newPasswordLabel') }}</label>
             <input
                 type="password"
                 id="newPassword"
                 v-model="passwordData.newPassword"
                 required
                 minlength="8"
-                class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                class="w-full"
                 autocomplete="new-password"
             >
-            <p v-if="passwordMismatch" class="text-red-500 text-xs italic mt-1">{{ $t('accountPage.changePassword.passwordMismatch') }}</p>
+            <p v-if="passwordMismatch" class="text-danger text-xs mt-1.5">{{ $t('accountPage.changePassword.passwordMismatch') }}</p>
           </div>
           <div>
-            <label for="confirmNewPassword" class="block text-gray-700 text-sm font-bold mb-2">{{ $t('accountPage.changePassword.confirmNewPasswordLabel') }}</label>
+            <label for="confirmNewPassword" class="block text-ink-soft text-sm font-medium mb-1.5">{{ $t('accountPage.changePassword.confirmNewPasswordLabel') }}</label>
             <input
                 type="password"
                 id="confirmNewPassword"
                 v-model="passwordData.confirmNewPassword"
                 required
                 minlength="8"
-                class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                class="w-full"
                 autocomplete="new-password"
             >
           </div>
-          <div v-if="authStore.error" class="text-red-500 text-sm">{{ authStore.error }}</div>
-          <div v-if="successMessage" class="text-green-600 text-sm">{{ successMessage }}</div>
+          <div v-if="authStore.error" class="text-danger text-sm">{{ authStore.error }}</div>
+          <div v-if="successMessage" class="text-success-ink text-sm">{{ successMessage }}</div>
           <button
               type="submit"
               :disabled="authStore.loading || passwordMismatch"
-              class="bg-primary hover:bg-secondary text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline disabled:opacity-50"
+              class="btn btn-primary"
           >
             {{ authStore.loading ? $t('accountPage.changePassword.changing') : $t('accountPage.changePassword.changeButton') }}
           </button>
         </form>
       </section>
 
-      <section aria-labelledby="logout-heading">
-        <h3 id="logout-heading" class="text-xl font-semibold text-gray-700 border-b pb-2 mb-4">{{ $t('accountPage.logout.title') }}</h3>
-        <p class="text-gray-600 mb-4">{{ $t('accountPage.logout.description') }}</p>
+      <section aria-labelledby="logout-heading" class="card p-6">
+        <h3 id="logout-heading" class="section-title mb-4">{{ $t('accountPage.logout.title') }}</h3>
+        <p class="text-ink-soft mb-4">{{ $t('accountPage.logout.description') }}</p>
         <button
             @click="handleLogout"
             :disabled="authStore.loading"
-            class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline disabled:opacity-50"
+            class="btn btn-secondary"
         >
           {{ authStore.loading ? $t('accountPage.logout.loggingOut') : $t('accountPage.logout.logoutButton') }}
         </button>
       </section>
 
-      <section aria-labelledby="danger-zone-heading" class="border border-red-300 rounded-lg p-6 bg-red-50">
-        <h3 id="danger-zone-heading" class="text-xl font-semibold text-red-700 mb-4">{{ $t('accountPage.dangerZone.title') }}</h3>
-        <p class="text-red-600 mb-4">{{ $t('accountPage.dangerZone.description') }}</p>
+      <section aria-labelledby="danger-zone-heading" class="rounded-3xl p-6 bg-danger-soft border border-danger/40">
+        <h3 id="danger-zone-heading" class="section-title text-danger-ink mb-2">{{ $t('accountPage.dangerZone.title') }}</h3>
+        <p class="text-danger-ink mb-4">{{ $t('accountPage.dangerZone.description') }}</p>
         <button
             @click="showDeleteConfirmation = true"
             :disabled="authStore.loading"
-            class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline disabled:opacity-50"
+            class="btn btn-danger"
         >
           {{ authStore.loading ? $t('accountPage.dangerZone.deleting') : $t('accountPage.dangerZone.deleteButton') }}
         </button>
@@ -169,7 +184,7 @@
             confirm-button-type="danger"
             @confirm="handleDeleteAccount"
         />
-        <div v-if="deleteError" class="text-red-700 text-sm mt-4">{{ deleteError }}</div>
+        <div v-if="deleteError" class="text-danger text-sm mt-4">{{ deleteError }}</div>
       </section>
 
     </div>
@@ -183,7 +198,10 @@ import { useRouter } from 'vue-router';
 import ConfirmationModal from "@/components/ConfirmationModal.vue";
 import LanguagePicker from "@/components/LanguagePicker.vue";
 import UserApi from '@/api/users.ts';
-import { CheckIcon, CheckCircleIcon, XMarkIcon, PencilSquareIcon } from '@heroicons/vue/24/outline';
+import { CheckIcon, CheckCircleIcon, XMarkIcon, PencilSquareIcon, SunIcon, MoonIcon } from '@heroicons/vue/24/outline';
+import { useI18n } from 'vue-i18n';
+import { useDarkMode } from '@/composables/useDarkMode';
+import { formatDay } from '@/utils/formatDate';
 
 
 interface PasswordData {
@@ -193,6 +211,8 @@ interface PasswordData {
 }
 
 const authStore = useAuthStore();
+const { locale } = useI18n();
+const { isDark } = useDarkMode();
 const router = useRouter();
 
 const editState = reactive({ username: false, email: false });
@@ -252,9 +272,7 @@ const passwordMismatch = computed(() => {
 const formattedJoinDate = computed(() => {
   if (authStore.user?.created_at) {
     try {
-      return new Date(authStore.user.created_at).toLocaleDateString('en-US', {
-        year: 'numeric', month: 'long', day: 'numeric'
-      });
+      return formatDay(authStore.user.created_at, locale.value, true) ?? 'Invalid Date';
     } catch (e) {
       return 'Invalid Date';
     }

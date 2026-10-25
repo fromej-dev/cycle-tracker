@@ -1,30 +1,31 @@
 <template>
   <div>
-    <ul class="space-y-4">
+    <ul class="group-list phase-period">
       <li
           v-for="period in periodsStore.periods"
           :key="period.id"
-          class="bg-background p-4 rounded-lg shadow-sm border border-accent flex justify-between items-center hover:shadow-md transition-shadow"
+          class="py-3.5 first:pt-0 last:pb-0 flex justify-between items-center gap-3"
       >
-        <div>
-          <p class="font-semibold text-text">
-            {{ period.start_date }} - {{ period.end_date || $t('periodList.ongoing') }}
-          </p>
-          <p v-if="period.duration !== null" class="text-sm text-gray-600 dark:text-gray-400">
-            {{ $t('periodList.duration') }} {{ $t('common.dayN', period.duration) }}
-          </p>
+        <div class="flex items-center gap-3 min-w-0">
+          <span class="phase-dot flex-shrink-0"></span>
+          <div class="min-w-0">
+            <p class="font-medium text-ink">
+              {{ rangeText(period) }}
+            </p>
+            <p v-if="period.duration !== null" class="text-sm text-ink-soft">
+              {{ $t('periodList.duration') }} {{ $t('common.dayN', period.duration) }}
+            </p>
+          </div>
         </div>
-        <div>
-          <button
-              @click="showDeleteConfirmation(period.id)"
-              class="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm font-medium transition-colors"
-          >
-            {{ $t('periodList.delete') }}
-          </button>
-        </div>
+        <button
+            @click="showDeleteConfirmation(period.id)"
+            class="text-danger text-sm font-medium px-2 py-1 -mr-2 rounded-lg hover:bg-danger-soft transition-colors"
+        >
+          {{ $t('periodList.delete') }}
+        </button>
       </li>
     </ul>
-    <div v-if="!periodsStore.periods.length && !periodsStore.loading" class="text-center text-gray-500 dark:text-gray-400">{{ $t('periodList.noPeriods') }}</div>
+    <div v-if="!periodsStore.periods.length && !periodsStore.loading" class="text-center text-ink-soft py-4">{{ $t('periodList.noPeriods') }}</div>
 
     <!-- Delete Confirmation Modal -->
     <ConfirmationModal
@@ -44,12 +45,16 @@ import { usePeriodsStore } from '@/stores/periods';
 import { useReportsStore } from "@/stores/reports";
 import { useToast } from '@/composables/useToast';
 import { useI18n } from 'vue-i18n';
+import { formatDay } from '@/utils/formatDate';
 import ConfirmationModal from '@/components/ConfirmationModal.vue';
 
 const periodsStore  = usePeriodsStore();
 const reportStore = useReportsStore();
 const toast = useToast();
-const { t } = useI18n();
+const { t, locale } = useI18n();
+
+const rangeText = (period) =>
+  `${formatDay(period.start_date, locale.value)} – ${period.end_date ? formatDay(period.end_date, locale.value) : t('periodList.ongoing')}`;
 
 const showDeleteModal = ref(false);
 const periodToDelete = ref(null);
@@ -80,6 +85,4 @@ onMounted(async () => {
 })
 </script>
 
-<style scoped>
-/* PeriodList specific styles */
-</style>
+

@@ -236,7 +236,11 @@
       "dueToday": "Vandaag verwacht",
       "overdue": "over tijd"
     },
-    "periodStarted": "Menstruatie gestart:"
+    "periodStarted": "Menstruatie gestart:",
+    "eyebrowPeriod": "Huidige menstruatie",
+    "eyebrowNext": "Volgende menstruatie",
+    "eyebrowLate": "Menstruatie te laat",
+    "predictedHint": "Geschat op basis van je eerdere cycli"
   },
   "periodList": {
     "duration": "Duur:",
@@ -258,7 +262,11 @@
   },
   "theme": {
     "switchToDark": "Schakel over naar donkere modus",
-    "switchToLight": "Schakel over naar lichte modus"
+    "switchToLight": "Schakel over naar lichte modus",
+    "title": "Weergave",
+    "description": "Kies een lichte of donkere weergave. Je keuze blijft op dit apparaat bewaard.",
+    "light": "Licht",
+    "dark": "Donker"
   },
   "toast": {
     "periodCreated": "Menstruatie succesvol geregistreerd",
@@ -267,5 +275,16 @@
     "passwordChanged": "Wachtwoord succesvol gewijzigd",
     "accountDeleted": "Account succesvol verwijderd",
     "settingsUpdated": "Instellingen succesvol bijgewerkt"
+  },
+  "nav": {
+    "dashboard": "Vandaag",
+    "account": "Account"
+  },
+  "phases": {
+    "period": "Menstruatie",
+    "fertile": "Vruchtbaar",
+    "luteal": "Overige dagen",
+    "predicted": "Voorspeld",
+    "estimated": "Schatting"
   }
 }

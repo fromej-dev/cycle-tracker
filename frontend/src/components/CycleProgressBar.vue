@@ -76,37 +76,36 @@ const progressPercentDisplay = computed(() => store.cycleContext?.progress_perce
 </script>
 
 <template>
-  <div class="dashboard-card bg-white p-4">
+  <div class="card phase-fertile p-5">
     <div v-if="!store.cycleContext" class="space-y-3 animate-pulse">
       <div class="flex justify-between items-center">
-        <div class="h-4 bg-gray-200 rounded w-2/5"></div>
-        <div class="h-4 bg-gray-200 rounded w-1/4"></div>
+        <div class="h-4 bg-surface-muted rounded w-2/5"></div>
+        <div class="h-4 bg-surface-muted rounded w-1/4"></div>
       </div>
       <div class="relative pt-1 pb-3">
-        <div class="h-2.5 bg-gray-200 rounded-full w-full"></div>
+        <div class="h-2.5 bg-surface-muted rounded-full w-full"></div>
       </div>
       <div class="flex justify-between">
-        <div class="h-3 bg-gray-200 rounded w-1/12"></div>
-        <div class="h-3 bg-gray-200 rounded w-1/12"></div>
+        <div class="h-3 bg-surface-muted rounded w-1/12"></div>
+        <div class="h-3 bg-surface-muted rounded w-1/12"></div>
       </div>
     </div>
 
     <div v-else class="space-y-2">
       <div class="flex justify-between items-center gap-2">
-        <span class="text-sm font-medium text-gray-700 flex-shrink-0">
+        <span class="text-sm font-semibold text-ink flex-shrink-0">
           {{ t('cycleProgressBar.title.dayOf', [store.cycleContext.cycle_day, cycleLengthDisplay]) }}
         </span>
-        <span v-if="store.cycleContext.days_until_next_period !== null" class="text-sm text-gray-500 text-right flex-shrink overflow-hidden whitespace-nowrap text-ellipsis">
+        <span v-if="store.cycleContext.days_until_next_period !== null" class="text-sm text-ink-soft text-right flex-shrink overflow-hidden whitespace-nowrap text-ellipsis">
           {{ t('cycleProgressBar.title.remaining', store.cycleContext.days_until_next_period) }}
         </span>
       </div>
 
       <div class="relative pt-1 pb-4">
-        <div class="relative w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
+        <div class="relative w-full h-3 bg-surface-muted rounded-full overflow-hidden">
           <div
               v-if="fertileStartPercent !== null && fertileWindowWidthPercent > 0"
-              class="absolute top-0 bottom-0 h-full rounded-md"
-              :class="[store.cycleContext?.isInFertileWindow ? 'bg-primary-200' : 'bg-primary-100']"
+              class="absolute top-0 bottom-0 h-full rounded-md is-predicted"
               :style="{ left: `${fertileStartPercent}%`, width: `${fertileWindowWidthPercent}%` }"
               :title="t('cycleProgressBar.tooltips.fertileWindow')"
           ></div>
@@ -122,16 +121,16 @@ const progressPercentDisplay = computed(() => store.cycleContext?.progress_perce
             :style="{ left: `${ovulationPercent}%` }"
             :title="t('cycleProgressBar.tooltips.ovulationPrefix', ovulationDayNumber)"
         >
-          <SparklesIcon class="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+          <SparklesIcon class="h-3.5 w-3.5 text-fertile" aria-hidden="true" />
         </div>
       </div>
 
-      <div class="relative flex justify-between text-xs text-gray-500 h-4">
+      <div class="relative flex justify-between text-xs text-ink-soft h-4">
         <span>{{ t('cycleProgressBar.labels.start') }}</span>
 
         <span
             v-if="ovulationPercent !== null && ovulationDayNumber"
-            class="absolute transform -translate-x-1/2 text-primary font-medium whitespace-nowrap"
+            class="absolute transform -translate-x-1/2 text-fertile-ink font-medium whitespace-nowrap"
             :style="{ left: `${ovulationPercent}%` }"
         >
             {{ t('cycleProgressBar.labels.ovulation') }}

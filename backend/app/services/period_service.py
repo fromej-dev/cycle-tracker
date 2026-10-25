@@ -5,6 +5,12 @@ from app.models import Period
 from app.utils.exceptions import NotFoundError, PeriodLogicError
 
 
+def _emit(user_id: int, event: str, date: datetime.date) -> None:
+    from app.services.webhook_service import WebhookService
+
+    WebhookService.emit(int(user_id), event, date)
+
+
 class PeriodService:
     """Service layer for period tracking logic."""
 
@@ -20,7 +26,9 @@ class PeriodService:
 
         period = Period(user_id=user_id, start_date=start_date)
         try:
-            return period.save()
+            period.save()
+            _emit(user_id, "period_started", start_date)
+            return period
         except Exception as e:
             db.session.rollback()
             # Log e
@@ -65,7 +73,9 @@ class PeriodService:
 
         period.end_date = end_date
         try:
-            return period.save()
+            period.save()
+            _emit(user_id, "period_ended", end_date)
+            return period
         except Exception as e:
             db.session.rollback()
             # Log e

@@ -25,6 +25,12 @@ class Config:
     # building the calendar feed URL behind a reverse proxy.
     PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL")
 
+    # Outgoing webhooks: deliveries run in a background thread unless WEBHOOK_SYNC.
+    # ALLOW_PRIVATE_WEBHOOKS=1 (environment) allows private/loopback targets.
+    WEBHOOK_SYNC = False
+    WEBHOOK_BACKOFF = (0.0, 1.0, 3.0)
+    WEBHOOK_SCHEDULER_SECONDS = int(os.environ.get("WEBHOOK_SCHEDULER_SECONDS", 0))
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     # Define database path (creates 'instance' folder if it doesn't exist)
     INSTANCE_FOLDER_PATH = basedir / "instance"
@@ -75,6 +81,8 @@ class TestingConfig(Config):
     )
     JWT_SECRET_KEY = "test-jwt-secret"
     SECRET_KEY = "test-secret-key"
+    WEBHOOK_SYNC = True
+    WEBHOOK_BACKOFF = (0.0, 0.0, 0.0)
     WTF_CSRF_ENABLED = False  # Disable CSRF for testing forms if needed
 
 

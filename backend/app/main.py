@@ -114,6 +114,24 @@ def create_app(config_name: str | None = None) -> APIFlask:
     # Register error handlers
     register_error_handlers(app)
 
+    # Webhook CLI (`flask webhooks tick`) and optional in-process scheduler
+    @app.cli.group("webhooks")
+    def webhooks_cli():
+        """Outgoing webhook maintenance."""
+
+    @webhooks_cli.command("tick")
+    def webhooks_tick():
+        """Fire due time-driven events (expected soon / fertile window)."""
+        from app.services.webhook_service import WebhookService
+
+        print(WebhookService.tick())
+
+    seconds = app.config.get("WEBHOOK_SCHEDULER_SECONDS", 0)
+    if seconds and not app.config.get("TESTING"):
+        from app.services.webhook_service import start_scheduler
+
+        start_scheduler(app, seconds)
+
     # Shell context for Flask CLI (optional)
     @app.shell_context_processor
     def make_shell_context():

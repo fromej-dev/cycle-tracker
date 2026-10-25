@@ -35,9 +35,32 @@ class User(BaseModel):
         db.Boolean, nullable=False, default=False, server_default=db.false()
     )
 
+    # Read-only partner share (heads-up page). Only the token hash is stored.
+    partner_share_token_hash = db.Column(db.String(64), unique=True, index=True)
+    partner_share_name = db.Column(db.String(40))  # page title; None -> neutral default
+    partner_share_fertile = db.Column(
+        db.Boolean, nullable=False, default=False, server_default=db.false()
+    )
+    partner_share_window_days = db.Column(
+        db.Integer, nullable=False, default=7, server_default="7"
+    )
+
+    # Home Assistant state endpoint (/ha/<token>/state); hash only.
+    ha_token_hash = db.Column(db.String(64), unique=True, index=True)
+    ha_include_fertile = db.Column(
+        db.Boolean, nullable=False, default=False, server_default=db.false()
+    )
+
+    # JSON dedupe bookkeeping for outgoing webhook events (see WebhookService).
+    webhook_state = db.Column(db.Text)
+
     # Relationship to periods (one-to-many)
     periods = db.relationship(
         "Period", back_populates="user", lazy=True, cascade="all, delete-orphan"
+    )
+
+    webhooks = db.relationship(
+        "Webhook", back_populates="user", lazy=True, cascade="all, delete-orphan"
     )
 
     planned_events = db.relationship(

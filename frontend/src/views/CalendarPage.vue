@@ -114,7 +114,8 @@ const info = (c: Cell) => {
     logged: !!lg,
     joinPrev: !!lg && c.col > 0 && !!loggedMap.value.get(iso(subDays(parseISO(c.iso), 1))),
     joinNext: !!lg && c.col < 6 && !!loggedMap.value.get(iso(addDays(parseISO(c.iso), 1))),
-    pBleeding: pr?.p_bleeding ?? 0,
+    // every day of the underlined start window shows at least the faintest predicted shade
+    pBleeding: lg ? 0 : startWinSet.value.has(c.iso) && !reason.value ? Math.max(pr?.p_bleeding ?? 0, 0.19) : pr?.p_bleeding ?? 0,
     fertile: !lg ? fertileMap.value.get(c.iso)?.strength ?? 0 : 0,
     projected: fertileMap.value.get(c.iso)?.projected ?? false,
     ovulation: !lg && !!fertileMap.value.get(c.iso)?.ovulation,

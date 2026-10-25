@@ -116,9 +116,7 @@ function toggleSidebar() {
 
 <style scoped>
 .tabbar {
-  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
-  -webkit-backdrop-filter: blur(16px) saturate(1.4);
-  backdrop-filter: blur(16px) saturate(1.4);
+  background: var(--color-surface);
   box-shadow: var(--shadow-nav);
   padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
 }

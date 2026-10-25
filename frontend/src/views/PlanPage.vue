@@ -4,13 +4,24 @@ import { useI18n } from 'vue-i18n';
 import { addDays, differenceInCalendarDays, formatISO, parseISO, isValid } from 'date-fns';
 import { BookmarkIcon, PencilSquareIcon } from '@heroicons/vue/24/outline';
 import BottomSheet from '@/components/BottomSheet.vue';
+import DateField from '@/components/DateField.vue';
+import { useReportsStore } from '@/stores/reports';
 import Skeleton from '@/components/Skeleton.vue';
 import { dateCheckApi, eventsApi, apiMessage, localToday, type DateCheck, type PlanEvent } from '@/api/plan';
-import { formatRange, formatDay } from '@/utils/formatDate';
+import { formatRange, formatDay, formatBetween } from '@/utils/formatDate';
 import { useToast } from '@/composables/useToast';
 
 const { t, te, locale } = useI18n();
 const toast = useToast();
+const reports = useReportsStore();
+// the same most-likely START day the calendar marks with a dot
+const likelyStart = computed(() => reports.forecast?.most_likely_start ?? null);
+const startNote = computed(() => {
+  const r = reports.forecast?.interval_80;
+  const bt = formatBetween(r?.start, r?.end, locale.value);
+  if (!bt || reports.forecast?.is_late) return '';
+  return t('plan.startNote', { pct: 80, range: r!.start === r!.end ? bt.b : `${bt.a}–${bt.b}` });
+});
 const iso = (d: Date) => formatISO(d, { representation: 'date' });
 const todayISO = localToday();
 
@@ -81,14 +92,23 @@ const cells = computed(() => {
     p: d.p_bleeding,
     h: Math.max(8, Math.round((d.p_bleeding / max) * 100)),
     likely: likelySet.value.has(d.date),
+    start: d.date === likelyStart.value,
+    pct: d.p_bleeding < 0.005 ? '' : d.p_bleeding < 0.01 ? '<1' : String(Math.round(d.p_bleeding * 100)),
     label: `${formatDay(d.date, locale.value)}: ${Math.round(d.p_bleeding * 100)}%`,
   }));
 });
 const tickEvery = computed(() => (cells.value.length <= 14 ? 1 : 7));
 
-const mapped = (prefix: string, v: string | null) => (v ? (te(`${prefix}.${v}`) ? t(`${prefix}.${v}`) : v) : null);
+// the API answers in English sentences: show them as they are in English, a generic line of our own otherwise
+const isNl = computed(() => locale.value.startsWith('nl'));
+const mapped = (prefix: string, v: string | null) => {
+  if (!v) return null;
+  if (te(`${prefix}.${v}`)) return t(`${prefix}.${v}`);
+  if (!isNl.value) return v;
+  return prefix === 'plan.horizons' ? t('plan.horizonGeneric') : t('plan.reasonGeneric');
+};
 const reasonText = computed(() => mapped('plan.reasons', result.value?.reason ?? null));
-const horizonText = computed(() => mapped('plan.horizon', result.value?.horizon_note ?? null));
+const horizonText = computed(() => mapped('plan.horizons', result.value?.horizon_note ?? null));
 const confText = computed(() => (result.value?.confidence && te(`plan.confidence.${result.value.confidence}`) ? t(`plan.confidence.${result.value.confidence}`) : null));
 
 // ---- events ----
@@ -155,7 +175,7 @@ function checkEvent(e: PlanEvent) {
   (document.querySelector('main') as HTMLElement | null)?.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-onMounted(() => { check(); loadEvents(); });
+onMounted(() => { check(); loadEvents(); if (!reports.forecast) reports.fetchForecast(); });
 </script>
 
 <template>
@@ -168,11 +188,11 @@ onMounted(() => { check(); loadEvents(); });
     <section class="mt-5 grid grid-cols-2 gap-3" :aria-label="$t('plan.pick')">
       <div class="min-w-0">
         <label for="plan-start" class="mb-1.5 block text-sm font-medium text-ink-soft">{{ $t('plan.from') }}</label>
-        <input id="plan-start" type="date" v-model="start" @change="onStart" class="block w-full min-w-0" />
+        <DateField id="plan-start" v-model="start" :label="$t('plan.from')" @change="onStart" />
       </div>
       <div class="min-w-0">
         <label for="plan-end" class="mb-1.5 block text-sm font-medium text-ink-soft">{{ $t('plan.to') }}</label>
-        <input id="plan-end" type="date" v-model="end" :min="start" :max="maxEnd" class="block w-full min-w-0" />
+        <DateField id="plan-end" v-model="end" :min="start" :max="maxEnd" :label="$t('plan.to')" />
       </div>
     </section>
     <p v-if="formError" class="mt-2 text-sm text-danger" role="alert">{{ formError }}</p>
@@ -189,11 +209,16 @@ onMounted(() => { check(); loadEvents(); });
           </p>
           <p class="mt-1 font-display text-[1.25rem] leading-snug text-balance">{{ answerSentence }}</p>
 
+          <p class="mt-3 text-[0.875rem] leading-snug text-ink-soft">{{ startNote }} {{ $t('plan.countsAny') }}</p>
           <div v-if="cells.length" class="mt-5">
+            <p class="mb-2 text-[0.8125rem] font-semibold text-ink-soft">{{ $t('plan.timelineTitle') }}</p>
             <div class="tl" :style="{ gridTemplateColumns: `repeat(${cells.length}, minmax(0, 1fr))` }" role="img" :aria-label="$t('plan.timelineLabel')">
               <span v-for="c in cells" :key="c.date" class="tl-col" :title="c.label">
-                <i class="tl-bar" :class="{ likely: c.likely }" :style="{ height: c.h + '%' }"></i>
+                <i class="tl-bar" :class="{ likely: c.likely }" :style="{ height: c.h + '%' }"><b v-if="c.start" class="tl-start"></b></i>
               </span>
+            </div>
+            <div v-if="cells.length <= 14" class="tl-pcts" :style="{ gridTemplateColumns: `repeat(${cells.length}, minmax(0, 1fr))` }" aria-hidden="true">
+              <span v-for="c in cells" :key="c.date">{{ c.pct }}</span>
             </div>
             <div class="tl-ticks" :style="{ gridTemplateColumns: `repeat(${cells.length}, minmax(0, 1fr))` }" aria-hidden="true">
               <span v-for="(c, i) in cells" :key="c.date">{{ i % tickEvery === 0 || i === cells.length - 1 && cells.length <= 14 ? c.day : '' }}</span>
@@ -201,6 +226,7 @@ onMounted(() => { check(); loadEvents(); });
             <p class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-soft">
               <span class="inline-flex items-center gap-1.5"><i class="sw likely"></i>{{ $t('plan.legendLikely') }}</span>
               <span class="inline-flex items-center gap-1.5"><i class="sw"></i>{{ $t('plan.legendPossible') }}</span>
+              <span v-if="cells.some((c) => c.start)" class="inline-flex items-center gap-1.5"><i class="sw-dot"></i>{{ $t('plan.legendStart') }}</span>
             </p>
           </div>
 
@@ -246,8 +272,8 @@ onMounted(() => { check(); loadEvents(); });
           <input id="ev-name" v-model="sheet.name" maxlength="120" class="block w-full" :placeholder="$t('plan.sheet.namePlaceholder')" autocomplete="off" />
         </div>
         <div class="grid grid-cols-2 gap-3">
-          <div class="min-w-0"><label for="ev-s" class="mb-1.5 block text-sm font-medium text-ink-soft">{{ $t('plan.from') }}</label><input id="ev-s" type="date" v-model="sheet.start" class="block w-full min-w-0" /></div>
-          <div class="min-w-0"><label for="ev-e" class="mb-1.5 block text-sm font-medium text-ink-soft">{{ $t('plan.to') }}</label><input id="ev-e" type="date" v-model="sheet.end" :min="sheet.start" class="block w-full min-w-0" /></div>
+          <div class="min-w-0"><label for="ev-s" class="mb-1.5 block text-sm font-medium text-ink-soft">{{ $t('plan.from') }}</label><DateField id="ev-s" v-model="sheet.start" :label="$t('plan.from')" /></div>
+          <div class="min-w-0"><label for="ev-e" class="mb-1.5 block text-sm font-medium text-ink-soft">{{ $t('plan.to') }}</label><DateField id="ev-e" v-model="sheet.end" :min="sheet.start" :label="$t('plan.to')" /></div>
         </div>
         <p v-if="sheetError" class="rounded-2xl bg-danger-soft px-3.5 py-2.5 text-[0.8125rem] leading-snug text-danger-ink" role="alert">{{ sheetError }}</p>
         <button type="submit" class="btn btn-primary w-full" :disabled="sheetBusy">{{ $t('common.save') }}</button>
@@ -266,6 +292,10 @@ onMounted(() => { check(); loadEvents(); });
   background: color-mix(in srgb, var(--color-period) 26%, var(--color-surface));
   border: 1.5px dashed color-mix(in srgb, var(--color-period) 60%, transparent); }
 .tl-bar.likely { background: var(--color-period); border: 1.5px solid var(--color-period); }
+.tl-pcts { display: grid; gap: 3px; margin-top: .25rem; font-size: .6875rem; font-weight: 600; color: var(--color-ink); text-align: center; font-variant-numeric: tabular-nums; }
+.tl-bar { position: relative; }
+.tl-start { position: absolute; left: 50%; bottom: .375rem; width: .5rem; height: .5rem; margin-left: -.25rem; border-radius: 9999px; background: var(--color-ink); border: 1.5px solid var(--color-surface); }
+.sw-dot { display: inline-block; width: .5rem; height: .5rem; border-radius: 9999px; background: var(--color-ink); }
 .tl-ticks { display: grid; gap: 3px; margin-top: .375rem; font-size: .6875rem; color: var(--color-ink-soft); text-align: center; font-variant-numeric: tabular-nums; }
 .sw { display: inline-block; width: 1rem; height: .75rem; border-radius: .25rem; background: color-mix(in srgb, var(--color-period) 26%, var(--color-surface)); border: 1.5px dashed color-mix(in srgb, var(--color-period) 60%, transparent); }
 .sw.likely { background: var(--color-period); border-color: var(--color-period); }

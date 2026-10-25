@@ -94,17 +94,17 @@
     "userInfo": {
       "title": "User information",
       "loading": "Loading user data...",
-      "username": "Username:",
-      "email": "Email:",
-      "memberSince": "Member since:",
+      "username": "Username",
+      "email": "Email",
+      "memberSince": "Member since",
       "notAvailable": "N/A",
       "error": "Could not load user data. Please try again later."
     },
     "changePassword": {
       "title": "Change password",
-      "currentPasswordLabel": "Current password:",
-      "newPasswordLabel": "New password:",
-      "confirmNewPasswordLabel": "Confirm new password:",
+      "currentPasswordLabel": "Current password",
+      "newPasswordLabel": "New password",
+      "confirmNewPasswordLabel": "Confirm new password",
       "passwordMismatch": "New passwords do not match.",
       "changeButton": "Change password",
       "changing": "Changing...",
@@ -328,7 +328,10 @@
       "started": "Period started today",
       "ended": "Period ended today",
       "button": "Undo"
-    }
+    },
+    "secondaryEarlier": "It could also start any day now: {range} ({pct}%)",
+    "lateMaybe": "Probably in about {n} days",
+    "lateMaybeSub": "That fits a period that went unlogged. You are {count} day past your usual cycle. | That fits a period that went unlogged. You are {count} days past your usual cycle."
   },
   "forecast": {
     "confidence": {
@@ -409,12 +412,14 @@
     "gapDetail": "A gap of {n} days is about twice your usual {usual}. Probably a period that was not logged, so it is left out of your average.",
     "legendPeriod": "Period",
     "legendFertile": "Estimated fertile days",
-    "legendTypical": "Your typical range"
+    "legendTypical": "Your typical range",
+    "from": "from {date}",
+    "today": "today"
   },
   "plan": {
     "eyebrow": "Plan",
     "title": "Will I have my period on…?",
-    "intro": "Pick a day or a trip and see the honest odds.",
+    "intro": "Pick a day or a trip and see how likely your period is.",
     "pick": "Dates",
     "from": "From",
     "to": "To",
@@ -423,7 +428,7 @@
       "range": "chance of your period at some point in these {n} days"
     },
     "timelineLabel": "Chance of bleeding for each day in the range",
-    "legendLikely": "Most likely days",
+    "legendLikely": "Likeliest bleeding days",
     "legendPossible": "Possible, less likely",
     "includesPast": "This range includes days that already passed. Check them against your log.",
     "save": "Save to my plans",
@@ -469,7 +474,13 @@
       "saved": "Plan saved",
       "updated": "Plan updated",
       "deleted": "Plan deleted"
-    }
+    },
+    "timelineTitle": "Chance of bleeding each day",
+    "countsAny": "This number counts any bleeding day within your dates.",
+    "startNote": "Your period most likely starts {range} ({pct}% sure).",
+    "legendStart": "Most likely start day",
+    "horizonGeneric": "The further ahead, the less certain any prediction is.",
+    "reasonGeneric": "This is an estimate from your logged cycles."
   },
   "feed": {
     "title": "Add to your calendar",
@@ -484,16 +495,16 @@
     "estimateHelp": "Adds \"(estimate)\" so a prediction is never mistaken for a fact.",
     "timezone": "Time zone",
     "create": "Create calendar link",
-    "rotate": "New link",
-    "turnOff": "Turn off",
+    "rotate": "Reset link",
+    "turnOff": "Stop syncing",
     "saved": "Calendar settings saved",
     "off": "Calendar link turned off",
     "copy": "Copy",
     "copied": "Copied",
     "rotateHelp": "A new link replaces the old one: calendars using the old link stop updating.",
-    "rotateTitle": "Make a new link?",
+    "rotateTitle": "Reset your link?",
     "rotateMessage": "The old link stops working right away. You will need to add the new one to each calendar app.",
-    "rotateConfirm": "Make new link",
+    "rotateConfirm": "Reset link",
     "offTitle": "Turn off calendar link?",
     "offMessage": "Your calendars stop updating. You can create a new link later.",
     "urlTitle": "Your calendar link",
@@ -515,6 +526,10 @@
     },
     "errors": {
       "generic": "That didn't work. Please try again."
-    }
+    },
+    "private": "This link is private: anyone who has it can see these dates. Don't share it. You can reset it anytime.",
+    "preview": "Looks like:",
+    "estimateTag": "(estimate)",
+    "syncing": "Your link is active. For safety it is only shown once; reset it to get a new one."
   }
 }

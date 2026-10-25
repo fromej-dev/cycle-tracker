@@ -241,6 +241,7 @@
     .btn:active { transform: scale(0.98); }
     .btn:disabled { opacity: .5; cursor: not-allowed; }
     .btn-primary { @apply bg-primary text-on-primary; }
+    .btn-primary:disabled { background: var(--color-surface-muted); color: var(--color-ink-soft); opacity: 1; border: 1px solid var(--color-line); }
     .btn-secondary { @apply bg-transparent text-primary border border-line-strong; }
     .btn-white { @apply bg-surface text-primary border border-line; }
     .btn-danger { background: var(--color-danger); color: var(--color-surface); }

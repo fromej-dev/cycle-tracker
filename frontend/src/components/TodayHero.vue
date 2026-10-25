@@ -9,12 +9,15 @@ import { differenceInCalendarDays, parseISO, startOfDay, subDays, formatISO, isV
 import CycleRing from '@/components/CycleRing.vue';
 import { useReportsStore } from '@/stores/reports';
 import { usePeriodsStore } from '@/stores/periods';
+import { useToast } from '@/composables/useToast';
 import { showUndo } from '@/composables/useUndo';
 import { formatDay, formatBetween, formatShort } from '@/utils/formatDate';
 
 const { t, locale } = useI18n();
 const reports = useReportsStore();
 const periodsStore = usePeriodsStore();
+const toast = useToast();
+const undoWith = async (fn: () => Promise<unknown>) => { periodsStore.clearError(); await fn(); if (periodsStore.error) toast.error(periodsStore.error); };
 
 onMounted(() => {
   if (!periodsStore.periods.length) periodsStore.fetchPeriods();
@@ -116,11 +119,20 @@ const secondary = computed(() => {
   if (!sw || isOngoing.value) return null;
   const bt = formatBetween(sw.start, sw.end, locale.value);
   if (!bt) return null;
-  return { text: t('today.secondary', { range: sw.start === sw.end ? formatShort(sw.end, locale.value) : `${bt.a}–${bt.b}`, pct: Math.round(sw.probability * 100) }), likely: sw.probability >= 0.5 };
+  const range = sw.start === sw.end ? formatShort(sw.end, locale.value) : `${bt.a}–${bt.b}`;
+  const pct = Math.round(sw.probability * 100);
+  // worded by its timing relative to the headline: an earlier window is "could also start any day now",
+  // a later one is the "you may have missed logging one" reading
+  const earlier = !!f.value?.most_likely_start && sw.start < f.value.most_likely_start;
+  return { earlier, text: t(earlier ? 'today.secondaryEarlier' : 'today.secondary', { range, pct }), likely: sw.probability >= 0.5 };
 });
+// late, and the headline is the "a period went unlogged" mode (further out than the any-day-now window)
+const lateMaybe = computed(() => isLate.value && !!secondary.value?.earlier && mlDaysAway.value > 3);
+const mlDaysAway = computed(() => Math.max(0, (mostLikelyIdx.value ?? 0) - todayIdx.value));
 
 const hero = computed(() => {
   if (isOngoing.value) return t('today.periodDayN', { n: dayNumber.value });
+  if (lateMaybe.value) return t('today.lateMaybe', { n: mlDaysAway.value });
   if (isLate.value) return t('today.daysLate', { count: daysLate.value }, daysLate.value);
   if (hasForecast.value && r80StartIdx.value !== null && r80EndIdx.value !== null) {
     const a = Math.max(0, r80StartIdx.value - todayIdx.value);
@@ -138,6 +150,7 @@ const hero = computed(() => {
 
 const sub = computed(() => {
   if (isOngoing.value) return avgPeriod.value ? t('today.periodUsually', { n: avgPeriod.value }) : null;
+  if (lateMaybe.value) return t('today.lateMaybeSub', { count: daysLate.value }, daysLate.value);
   if (isLate.value) return t('today.laterThanUsual');
   const bt = formatBetween(f.value?.interval_80?.start, f.value?.interval_80?.end, locale.value);
   if (hasForecast.value && bt) return t('today.between', { pct: 80, a: bt.a, b: bt.b });
@@ -145,6 +158,7 @@ const sub = computed(() => {
 });
 const sub2 = computed(() => {
   if (isOngoing.value) return null;
+  if (lateMaybe.value) return null;
   if (isLate.value) {
     const p = f.value?.probability_next_3_days;
     return p != null ? t('today.next3', { pct: Math.round(p * 100) }) : null;
@@ -160,13 +174,13 @@ const busy = computed(() => periodsStore.loading);
 async function act() {
   if (isEmpty.value || !isOngoing.value) {
     const p = await (isEmpty.value ? periodsStore.startPeriodToday() : periodsStore.createPeriod(todayISO));
-    if (p) showUndo(t('today.undo.started'), t('today.undo.button'), () => periodsStore.deletePeriod(p.id));
+    if (p) showUndo(t('today.undo.started'), t('today.undo.button'), () => undoWith(() => periodsStore.deletePeriod(p.id)));
     return;
   }
   if (latest.value) {
     const id = latest.value.id;
     const r = await periodsStore.updatePeriod(id, todayISO);
-    if (r) showUndo(t('today.undo.ended'), t('today.undo.button'), async () => { await periodsStore.reopenPeriod(id); });
+    if (r) showUndo(t('today.undo.ended'), t('today.undo.button'), () => undoWith(() => periodsStore.reopenPeriod(id)));
   }
 }
 </script>
@@ -199,7 +213,7 @@ async function act() {
       </template>
     </CycleRing>
 
-    <div v-if="!isEmpty" class="mt-1 flex flex-wrap justify-center gap-x-5 gap-y-1.5 text-xs text-ink-soft">
+    <div v-if="!isEmpty" class="legend-grid mt-3 text-xs text-ink-soft">
       <span class="inline-flex items-center gap-1.5"><span class="legend-dot" style="background: var(--color-period)"></span>{{ $t('today.legendPeriod') }}</span>
       <span v-if="!isEmpty && todayIdx > 0" class="inline-flex items-center gap-1.5"><span class="legend-elapsed"></span>{{ $t('today.legendElapsed') }}</span>
       <span v-if="fertile" class="inline-flex items-center gap-1.5"><span class="legend-bar"></span>{{ $t('today.legendFertile') }}</span>
@@ -227,6 +241,8 @@ async function act() {
   text-wrap: balance;
   color: var(--color-ink);
 }
+.legend-grid { display: grid; grid-template-columns: repeat(3, auto); justify-content: center; gap: .375rem 1.25rem; }
+.legend-grid > span { white-space: nowrap; }
 .legend-dot { display: inline-block; width: .6rem; height: .6rem; border-radius: 9999px; }
 .legend-dotted { display: inline-block; width: 1.1rem; height: 0; border-top: 4px dotted var(--color-period); }
 .legend-elapsed { display: inline-block; width: 1.1rem; height: .6rem; border-radius: 9999px; background: color-mix(in srgb, var(--color-period) var(--ring-tint, 20%), transparent); }

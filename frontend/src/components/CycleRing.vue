@@ -74,7 +74,7 @@ const extraPath = computed(() => {
 });
 
 const FW = 10;
-const FR = R - W / 2 + FW / 2 + 3;
+const FR = R; // fertile arc rides the same centre line as the track, the so-far fill and the forecast bubbles
 const fertilePath = computed(() => {
   if (!props.fertile) return null;
   const a = Math.max(0, props.fertile.start);
@@ -142,9 +142,8 @@ const today = computed(() => (props.todayIdx === null ? null : pt(Math.min(props
 const pillPos = computed(() => {
   if (props.todayIdx === null) return null;
   const i = Math.min(props.todayIdx, N.value - 1) + 0.5;
-  const inside = pt(i, R - W / 2 - 25);
-  // in the upper half the centre text sits right there, so the pill goes outside the ring instead
-  return inside.y < C - 45 ? pt(i, R + W / 2 + 24) : inside;
+  // always outside the ring: inside it would sit on the disc edge and collide with the centre text
+  return pt(i, R + W / 2 + 22);
 });
 const pillW = computed(() => 20 + props.dayLabel.length * 7.2);
 </script>
@@ -193,7 +192,7 @@ const pillW = computed(() => 20 + props.dayLabel.length * 7.2);
 </template>
 
 <style scoped>
-.cycle-ring { position: relative; width: min(calc(100% + 16px), 26rem); aspect-ratio: 1; left: 50%; transform: translateX(-50%); }
+.cycle-ring { margin-bottom: 1.25rem; position: relative; width: min(calc(100% + 16px), 26rem); aspect-ratio: 1; left: 50%; transform: translateX(-50%); }
 .ring-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .ring-center {
   position: absolute; inset: 21% 20%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;

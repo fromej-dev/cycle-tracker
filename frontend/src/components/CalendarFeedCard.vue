@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { ClipboardDocumentIcon, CheckIcon } from '@heroicons/vue/24/outline';
+import { ClipboardDocumentIcon, CheckIcon, LockClosedIcon } from '@heroicons/vue/24/outline';
 import { feedApi, apiMessage, type CalendarFeed } from '@/api/plan';
 import ConfirmationModal from '@/components/ConfirmationModal.vue';
 import Skeleton from '@/components/Skeleton.vue';
@@ -19,6 +19,8 @@ const rotateAsk = ref(false);
 const offAsk = ref(false);
 const browserTz = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch { return ''; } })();
 
+const FALLBACK_ZONES = ['UTC', 'Europe/Amsterdam', 'Europe/London', 'Europe/Berlin', 'Europe/Paris', 'Europe/Madrid', 'Europe/Rome', 'Europe/Lisbon', 'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Sao_Paulo', 'Asia/Dubai', 'Asia/Kolkata', 'Asia/Singapore', 'Asia/Tokyo', 'Australia/Sydney', 'Pacific/Auckland'];
+const baseZones = (() => { try { const z = (Intl as any).supportedValuesOf?.('timeZone') as string[] | undefined; if (z?.length) return z.includes('UTC') ? z : ['UTC', ...z]; } catch { /* old browser */ } return FALLBACK_ZONES; })();
 const form = reactive({ label: '🌙', include_fertile: false, fertile_label: '', mark_estimates: false, timezone: browserTz });
 function fill(f: CalendarFeed) {
   form.label = f.label || '🌙';
@@ -28,6 +30,7 @@ function fill(f: CalendarFeed) {
   form.timezone = f.timezone || browserTz;
 }
 const dirty = ref(false);
+const zones = computed(() => (form.timezone && !baseZones.includes(form.timezone) ? [form.timezone, ...baseZones] : baseZones));
 
 onMounted(async () => {
   try { const r = await feedApi.get(); feed.value = r.data; fill(r.data); }
@@ -82,6 +85,7 @@ const enabled = computed(() => !!feed.value?.enabled);
   <section aria-labelledby="feed-heading" class="card p-6">
     <h3 id="feed-heading" class="section-title mb-1">{{ $t('feed.title') }}</h3>
     <p class="mb-4 text-[0.9375rem] leading-snug text-ink-soft">{{ $t('feed.intro') }}</p>
+    <p class="mb-4 rounded-2xl bg-surface-muted px-3.5 py-2.5 text-[0.8125rem] leading-snug"><LockClosedIcon class="mr-1.5 inline h-4 w-4 align-[-3px]" />{{ $t('feed.private') }}</p>
     <Skeleton v-if="loading" variant="line" />
     <template v-else>
       <!-- the link, shown once -->
@@ -106,6 +110,8 @@ const enabled = computed(() => !!feed.value?.enabled);
           <label for="feed-label" class="mb-1.5 block text-sm font-medium text-ink-soft">{{ $t('feed.label') }}</label>
           <input id="feed-label" v-model="form.label" maxlength="40" class="block w-full" />
           <p class="mt-1.5 text-xs leading-snug text-ink-soft">{{ $t('feed.labelHelp') }}</p>
+          <p class="mt-2 flex items-center gap-2 text-xs text-ink-soft">{{ $t('feed.preview') }}
+            <span class="preview">{{ (form.label.trim() || '🌙') + (form.mark_estimates ? ' ' + $t('feed.estimateTag') : '') }}</span></p>
         </div>
         <label class="flex items-start gap-3">
           <input type="checkbox" v-model="form.include_fertile" class="feed-check" />
@@ -121,12 +127,15 @@ const enabled = computed(() => !!feed.value?.enabled);
         </label>
         <div>
           <label for="feed-tz" class="mb-1.5 block text-sm font-medium text-ink-soft">{{ $t('feed.timezone') }}</label>
-          <input id="feed-tz" v-model="form.timezone" class="block w-full" autocapitalize="off" spellcheck="false" />
+          <select id="feed-tz" v-model="form.timezone" class="block w-full">
+            <option v-for="z in zones" :key="z" :value="z">{{ z }}</option>
+          </select>
         </div>
         <p v-if="error" class="rounded-2xl bg-danger-soft px-3.5 py-2.5 text-[0.8125rem] leading-snug text-danger-ink" role="alert">{{ error }}</p>
         <button v-if="!enabled" type="submit" class="btn btn-primary w-full" :disabled="busy">{{ $t('feed.create') }}</button>
         <template v-else>
           <button type="submit" class="btn btn-primary w-full" :disabled="busy || !dirty">{{ $t('common.save') }}</button>
+          <p v-if="!shownUrl" class="text-xs leading-snug text-ink-soft">{{ $t('feed.syncing') }}</p>
           <div class="flex flex-col gap-2 border-t border-line pt-4 sm:flex-row">
             <button type="button" class="btn btn-secondary flex-1" :disabled="busy" @click="rotateAsk = true">{{ $t('feed.rotate') }}</button>
             <button type="button" class="btn btn-secondary flex-1" :disabled="busy" @click="offAsk = true">{{ $t('feed.turnOff') }}</button>
@@ -143,4 +152,5 @@ const enabled = computed(() => !!feed.value?.enabled);
 
 <style scoped>
 .feed-check { flex: none; width: 1.375rem; height: 1.375rem; padding: 0; margin-top: .125rem; accent-color: var(--color-primary); }
+.preview { display: inline-flex; padding: .125rem .625rem; border-radius: .5rem; background: var(--color-primary-soft); color: var(--color-ink); font-weight: 600; }
 </style>

@@ -94,17 +94,17 @@
     "userInfo": {
       "title": "Gebruikersinformatie",
       "loading": "Gebruikersgegevens laden...",
-      "username": "Gebruikersnaam:",
-      "email": "E-mailadres:",
-      "memberSince": "Lid sinds:",
+      "username": "Gebruikersnaam",
+      "email": "E-mailadres",
+      "memberSince": "Lid sinds",
       "notAvailable": "N.v.t.",
       "error": "Kon gebruikersgegevens niet laden. Probeer het later opnieuw."
     },
     "changePassword": {
       "title": "Wachtwoord wijzigen",
-      "currentPasswordLabel": "Huidig wachtwoord:",
-      "newPasswordLabel": "Nieuw wachtwoord:",
-      "confirmNewPasswordLabel": "Bevestig nieuw wachtwoord:",
+      "currentPasswordLabel": "Huidig wachtwoord",
+      "newPasswordLabel": "Nieuw wachtwoord",
+      "confirmNewPasswordLabel": "Bevestig nieuw wachtwoord",
       "passwordMismatch": "Nieuwe wachtwoorden komen niet overeen.",
       "changeButton": "Wachtwoord wijzigen",
       "changing": "Bezig met wijzigen...",
@@ -328,7 +328,10 @@
       "started": "Menstruatie begonnen vandaag",
       "ended": "Menstruatie afgelopen vandaag",
       "button": "Ongedaan maken"
-    }
+    },
+    "secondaryEarlier": "Het kan ook elk moment beginnen: {range} ({pct}%)",
+    "lateMaybe": "Waarschijnlijk over ongeveer {n} dagen",
+    "lateMaybeSub": "Dat past bij een menstruatie die niet is geregistreerd. Je zit {count} dag voorbij je gebruikelijke cyclus. | Dat past bij een menstruatie die niet is geregistreerd. Je zit {count} dagen voorbij je gebruikelijke cyclus."
   },
   "forecast": {
     "confidence": {
@@ -409,12 +412,14 @@
     "gapDetail": "Een tussenpoos van {n} dagen is ongeveer twee keer je gebruikelijke {usual}. Waarschijnlijk is een menstruatie niet geregistreerd, daarom telt ze niet mee in je gemiddelde.",
     "legendPeriod": "Menstruatie",
     "legendFertile": "Geschatte vruchtbare dagen",
-    "legendTypical": "Jouw typische bereik"
+    "legendTypical": "Jouw typische bereik",
+    "from": "vanaf {date}",
+    "today": "vandaag"
   },
   "plan": {
     "eyebrow": "Plannen",
     "title": "Ben ik ongesteld op…?",
-    "intro": "Kies een dag of reis en zie eerlijk hoe groot de kans is.",
+    "intro": "Kies een dag of reis en zie hoe waarschijnlijk je menstruatie is.",
     "pick": "Data",
     "from": "Van",
     "to": "Tot",
@@ -423,7 +428,7 @@
       "range": "kans op menstruatie op minstens één van deze {n} dagen"
     },
     "timelineLabel": "Kans op bloeding per dag in de periode",
-    "legendLikely": "Meest waarschijnlijke dagen",
+    "legendLikely": "Meest waarschijnlijke bloedingsdagen",
     "legendPossible": "Mogelijk, minder waarschijnlijk",
     "includesPast": "Deze periode bevat dagen die al voorbij zijn. Vergelijk ze met je registraties.",
     "save": "Bewaar in mijn plannen",
@@ -469,7 +474,13 @@
       "saved": "Plan bewaard",
       "updated": "Plan bijgewerkt",
       "deleted": "Plan verwijderd"
-    }
+    },
+    "timelineTitle": "Kans op bloeding per dag",
+    "countsAny": "Dit getal telt elke dag met bloeding binnen jouw data.",
+    "startNote": "Je menstruatie begint waarschijnlijk {range} ({pct}% zeker).",
+    "legendStart": "Meest waarschijnlijke startdag",
+    "horizonGeneric": "Hoe verder vooruit, hoe onzekerder elke voorspelling is.",
+    "reasonGeneric": "Dit is een schatting op basis van je geregistreerde cycli."
   },
   "feed": {
     "title": "Aan je agenda toevoegen",
@@ -484,16 +495,16 @@
     "estimateHelp": "Voegt \"(schatting)\" toe zodat een voorspelling nooit voor een feit wordt aangezien.",
     "timezone": "Tijdzone",
     "create": "Agendalink maken",
-    "rotate": "Nieuwe link",
-    "turnOff": "Uitzetten",
+    "rotate": "Link resetten",
+    "turnOff": "Stop met synchroniseren",
     "saved": "Agenda-instellingen opgeslagen",
     "off": "Agendalink uitgezet",
     "copy": "Kopieer",
     "copied": "Gekopieerd",
     "rotateHelp": "Een nieuwe link vervangt de oude: agenda's met de oude link worden niet meer bijgewerkt.",
-    "rotateTitle": "Nieuwe link maken?",
+    "rotateTitle": "Link resetten?",
     "rotateMessage": "De oude link werkt meteen niet meer. Je moet de nieuwe in elke agenda-app toevoegen.",
-    "rotateConfirm": "Nieuwe link maken",
+    "rotateConfirm": "Link resetten",
     "offTitle": "Agendalink uitzetten?",
     "offMessage": "Je agenda's worden niet meer bijgewerkt. Je kunt later een nieuwe link maken.",
     "urlTitle": "Jouw agendalink",
@@ -515,6 +526,10 @@
     },
     "errors": {
       "generic": "Dat lukte niet. Probeer het opnieuw."
-    }
+    },
+    "private": "Deze link is privé: iedereen die hem heeft, ziet deze data. Deel hem niet. Je kunt hem altijd opnieuw instellen.",
+    "preview": "Ziet eruit als:",
+    "estimateTag": "(schatting)",
+    "syncing": "Je link is actief. Voor de veiligheid zie je hem maar één keer; reset hem om een nieuwe te krijgen."
   }
 }

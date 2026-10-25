@@ -47,7 +47,9 @@ const stats = computed(() => {
   if (ls.length < 2) return null;
   const avg = ls.reduce((a, b) => a + b, 0) / ls.length;
   const sd = Math.sqrt(ls.reduce((a, b) => a + (b - avg) ** 2, 0) / ls.length);
-  return { avg: Math.round(avg), sd: Math.max(1, Math.round(sd)), lo: avg - Math.max(1, sd), hi: avg + Math.max(1, sd), n: ls.length };
+  // the band is built from the SAME rounded numbers that are printed ("29 ± 1 days" = 28 to 30 days)
+  const a = Math.round(avg), d = Math.max(1, Math.round(sd));
+  return { avg: a, sd: d, lo: a - d, hi: a + d, n: ls.length };
 });
 const shown = computed(() => (props.limit ? rows.value.slice(0, props.limit) : rows.value));
 const axis = computed(() => {
@@ -65,7 +67,7 @@ const label = (r: Row) => (r.open ? t('history.current', { n: r.length }) : t('c
 const verdict = (r: Row) => {
   if (r.open) return null;
   if (r.gap) return t('history.gap');
-  if (stats.value && (r.length < stats.value.lo - 0.5 || r.length > stats.value.hi + 0.5)) return r.length < stats.value.avg ? t('history.short') : t('history.long');
+  if (stats.value && (r.length < stats.value.lo || r.length > stats.value.hi)) return r.length < stats.value.avg ? t('history.short') : t('history.long');
   return stats.value ? t('history.typical') : null;
 };
 </script>
@@ -81,7 +83,7 @@ const verdict = (r: Row) => {
       </div>
 
       <div class="hist relative">
-        <div v-if="stats" class="band" aria-hidden="true" :style="{ left: pos(stats.lo + 1), width: `${((stats.hi - stats.lo) / axis) * 100}%` }"></div>
+        <div v-if="stats" class="band" aria-hidden="true" :style="{ left: `${((stats.lo - 0.5) / axis) * 100}%`, width: `${((stats.hi - stats.lo + 1) / axis) * 100}%` }"></div>
         <div class="ticks relative" aria-hidden="true">
           <span v-for="d in ticks" :key="d" :style="{ left: pos(d) }">{{ d }}</span>
         </div>
@@ -89,14 +91,15 @@ const verdict = (r: Row) => {
           <li v-for="r in shown" :key="r.key">
             <button type="button" class="row" :aria-expanded="openKey === r.key" @click="openKey = openKey === r.key ? null : r.key">
               <span class="flex items-baseline justify-between gap-3">
-                <span class="font-display text-[1.125rem] leading-none">{{ label(r) }}</span>
-                <span class="text-[0.75rem] text-ink-soft" :class="{ 'gap-note': r.gap }">{{ verdict(r) ?? formatShort(r.start, locale) }}</span>
+                <span class="min-w-0"><span class="font-display text-[1.125rem] leading-none">{{ label(r) }}</span><span class="ml-2 text-[0.75rem] text-ink-soft">{{ $t('history.from', { date: formatShort(r.start, locale) }) }}</span></span>
+                <span class="text-right text-[0.75rem] text-ink-soft" :class="{ 'gap-note': r.gap }">{{ verdict(r) }}</span>
               </span>
               <span class="bar-wrap" aria-hidden="true">
                 <span class="track" :class="{ gap: r.gap, open: r.open }" :style="{ width: w(r.length) }">
                   <i class="period" :style="{ width: `${(Math.min(r.periodDays, r.length) / Math.min(r.length, axis)) * 100}%` }"></i>
                   <i v-if="r.fertile" class="fertile" :style="{ left: `${((r.fertile[0] - 1) / r.length) * 100}%`, width: `${((r.fertile[1] - r.fertile[0] + 1) / r.length) * 100}%` }"></i>
                 </span>
+                <span v-if="r.open" class="today-mark" :style="{ left: `${((r.length - 0.5) / axis) * 100}%` }"><i></i><b>{{ $t('history.today') }}</b></span>
                 <span v-if="clipped(r)" class="clip">…</span>
               </span>
             </button>
@@ -131,6 +134,9 @@ const verdict = (r: Row) => {
 .period, .fertile { position: absolute; top: 0; bottom: 0; display: block; }
 .period { left: 0; background: var(--color-period); border-radius: 9999px; }
 .fertile { background: var(--color-fertile); border-radius: 9999px; top: 22%; bottom: 22%; }
+.today-mark { position: absolute; top: -.125rem; bottom: -.125rem; width: 0; }
+.today-mark i { position: absolute; left: -1px; top: 0; bottom: 0; width: 2px; border-radius: 1px; background: var(--color-ink); opacity: .55; }
+.today-mark b { position: absolute; left: .375rem; top: 50%; transform: translateY(-50%); font-size: .6875rem; font-weight: 600; color: var(--color-ink-soft); white-space: nowrap; }
 .clip { position: absolute; right: 2px; top: -2px; font-weight: 700; color: var(--color-ink-soft); background: var(--color-surface); padding: 0 .25rem; border-radius: .5rem; line-height: 1.2; }
 .gap-note { color: var(--color-luteal-ink); font-weight: 600; }
 .detail { margin: .125rem 0 .5rem; padding: .75rem 1rem; border-radius: 1.125rem; background: var(--color-surface-muted); font-size: .875rem; line-height: 1.4; position: relative; }

@@ -57,7 +57,9 @@ const toast = useToast();
 const { t, locale } = useI18n();
 
 const rangeText = (period) =>
-  `${formatDay(period.start_date, locale.value)} – ${period.end_date ? formatDay(period.end_date, locale.value) : t('periodList.ongoing')}`;
+  period.end_date
+    ? `${formatDay(period.start_date, locale.value)}–${formatDay(period.end_date, locale.value)}`
+    : `${formatDay(period.start_date, locale.value)} · ${t('periodList.ongoing')}`;
 
 const LIMIT = 4;
 const expanded = ref(false);

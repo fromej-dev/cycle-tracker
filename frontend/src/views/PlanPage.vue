@@ -14,13 +14,19 @@ import { useToast } from '@/composables/useToast';
 const { t, te, locale } = useI18n();
 const toast = useToast();
 const reports = useReportsStore();
-// the same most-likely START day the calendar marks with a dot
-const likelyStart = computed(() => reports.forecast?.most_likely_start ?? null);
+// One rule for solid vs dashed bars: solid when the chance of bleeding that day is at least 50%.
+const SOLID_AT = 0.5;
+const startConf = 80;
+// the 80% window for the period START, drawn as an underline under the bars (like the calendar's underline)
+const startWin = computed(() => {
+  const r = reports.forecast?.interval_80;
+  return r ?? null;
+});
 const startNote = computed(() => {
   const r = reports.forecast?.interval_80;
   const bt = formatBetween(r?.start, r?.end, locale.value);
-  if (!bt || reports.forecast?.is_late) return '';
-  return t('plan.startNote', { pct: 80, range: r!.start === r!.end ? bt.b : `${bt.a}–${bt.b}` });
+  if (!bt) return '';
+  return t('plan.startNote', { pct: startConf, range: r!.start === r!.end ? bt.b : `${bt.a}–${bt.b}` });
 });
 const iso = (d: Date) => formatISO(d, { representation: 'date' });
 const todayISO = localToday();
@@ -77,12 +83,6 @@ const answerSentence = computed(() => (single.value
   ? t('plan.answer.single', { date: formatDay(start.value, locale.value) })
   : t('plan.answer.range', { n: nDays.value })));
 
-const likelySet = computed(() => {
-  const m = result.value?.most_likely_days;
-  const set = new Set<string>();
-  if (Array.isArray(m)) for (const v of m) set.add(typeof v === 'string' ? v : v?.date);
-  return set;
-});
 const cells = computed(() => {
   const days = result.value?.days ?? [];
   const max = Math.max(0.05, ...days.map((d) => d.p_bleeding));
@@ -91,12 +91,18 @@ const cells = computed(() => {
     day: parseISO(d.date).getDate(),
     p: d.p_bleeding,
     h: Math.max(8, Math.round((d.p_bleeding / max) * 100)),
-    likely: likelySet.value.has(d.date),
-    start: d.date === likelyStart.value,
-    pct: d.p_bleeding < 0.005 ? '' : d.p_bleeding < 0.01 ? '<1' : String(Math.round(d.p_bleeding * 100)),
+    likely: d.p_bleeding >= SOLID_AT,
+    inWin: !!startWin.value && d.date >= startWin.value.start && d.date <= startWin.value.end,
+    pct: d.p_bleeding < 0.005 ? '' : d.p_bleeding < 0.01 ? '<1%' : Math.round(d.p_bleeding * 100) + '%',
     label: `${formatDay(d.date, locale.value)}: ${Math.round(d.p_bleeding * 100)}%`,
   }));
 });
+// first/last column (1-based grid lines) of the start window inside the chosen days
+const winSpan = computed(() => {
+  const idx = cells.value.map((c, i) => (c.inWin ? i : -1)).filter((i) => i >= 0);
+  return idx.length ? { from: idx[0] + 1, to: idx[idx.length - 1] + 2 } : null;
+});
+const higherThanStart = computed(() => !!startNote.value && !!winSpan.value && (result.value?.probability_any ?? 0) * 100 > startConf);
 const tickEvery = computed(() => (cells.value.length <= 14 ? 1 : 7));
 
 // the API answers in English sentences: show them as they are in English, a generic line of our own otherwise
@@ -209,13 +215,16 @@ onMounted(() => { check(); loadEvents(); if (!reports.forecast) reports.fetchFor
           </p>
           <p class="mt-1 font-display text-[1.25rem] leading-snug text-balance">{{ answerSentence }}</p>
 
-          <p class="mt-3 text-[0.875rem] leading-snug text-ink-soft">{{ startNote }} {{ $t('plan.countsAny') }}</p>
+          <p class="mt-3 text-[0.875rem] leading-snug text-ink-soft">{{ startNote }} {{ $t('plan.countsAny') }}<template v-if="higherThanStart"> {{ $t('plan.higherThan', { pct: startConf }) }}</template></p>
           <div v-if="cells.length" class="mt-5">
             <p class="mb-2 text-[0.8125rem] font-semibold text-ink-soft">{{ $t('plan.timelineTitle') }}</p>
             <div class="tl" :style="{ gridTemplateColumns: `repeat(${cells.length}, minmax(0, 1fr))` }" role="img" :aria-label="$t('plan.timelineLabel')">
               <span v-for="c in cells" :key="c.date" class="tl-col" :title="c.label">
-                <i class="tl-bar" :class="{ likely: c.likely }" :style="{ height: c.h + '%' }"><b v-if="c.start" class="tl-start"></b></i>
+                <i class="tl-bar" :class="{ likely: c.likely }" :style="{ height: c.h + '%' }"></i>
               </span>
+            </div>
+            <div v-if="winSpan" class="tl-win" :style="{ gridTemplateColumns: `repeat(${cells.length}, minmax(0, 1fr))` }" aria-hidden="true">
+              <span class="tl-win-line" :style="{ gridColumn: `${winSpan.from} / ${winSpan.to}` }"><em>{{ $t('plan.likelyStartLabel') }}</em></span>
             </div>
             <div v-if="cells.length <= 14" class="tl-pcts" :style="{ gridTemplateColumns: `repeat(${cells.length}, minmax(0, 1fr))` }" aria-hidden="true">
               <span v-for="c in cells" :key="c.date">{{ c.pct }}</span>
@@ -226,8 +235,9 @@ onMounted(() => { check(); loadEvents(); if (!reports.forecast) reports.fetchFor
             <p class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-soft">
               <span class="inline-flex items-center gap-1.5"><i class="sw likely"></i>{{ $t('plan.legendLikely') }}</span>
               <span class="inline-flex items-center gap-1.5"><i class="sw"></i>{{ $t('plan.legendPossible') }}</span>
-              <span v-if="cells.some((c) => c.start)" class="inline-flex items-center gap-1.5"><i class="sw-dot"></i>{{ $t('plan.legendStart') }}</span>
+              <span v-if="winSpan" class="inline-flex items-center gap-1.5"><i class="sw-line"></i>{{ $t('plan.likelyStartLabel') }}</span>
             </p>
+            <p v-if="winSpan" class="mt-1.5 text-xs text-ink-soft">{{ $t('plan.peakNote') }}</p>
           </div>
 
           <dl class="mt-5 space-y-1.5 border-t border-line pt-4 text-[0.875rem] leading-snug text-ink-soft">
@@ -293,9 +303,10 @@ onMounted(() => { check(); loadEvents(); if (!reports.forecast) reports.fetchFor
   border: 1.5px dashed color-mix(in srgb, var(--color-period) 60%, transparent); }
 .tl-bar.likely { background: var(--color-period); border: 1.5px solid var(--color-period); }
 .tl-pcts { display: grid; gap: 3px; margin-top: .25rem; font-size: .6875rem; font-weight: 600; color: var(--color-ink); text-align: center; font-variant-numeric: tabular-nums; }
-.tl-bar { position: relative; }
-.tl-start { position: absolute; left: 50%; bottom: .375rem; width: .5rem; height: .5rem; margin-left: -.25rem; border-radius: 9999px; background: var(--color-ink); border: 1.5px solid var(--color-surface); }
-.sw-dot { display: inline-block; width: .5rem; height: .5rem; border-radius: 9999px; background: var(--color-ink); }
+.tl-win { display: grid; gap: 3px; margin-top: .375rem; }
+.tl-win-line { display: flex; justify-content: center; border-top: 3px solid var(--color-ink); border-radius: 9999px; padding-top: .125rem; min-width: 0; }
+.tl-win-line em { font-style: normal; font-size: .6875rem; font-weight: 600; color: var(--color-ink); white-space: nowrap; }
+.sw-line { display: inline-block; width: 1rem; height: 0; border-top: 3px solid var(--color-ink); border-radius: 9999px; }
 .tl-ticks { display: grid; gap: 3px; margin-top: .375rem; font-size: .6875rem; color: var(--color-ink-soft); text-align: center; font-variant-numeric: tabular-nums; }
 .sw { display: inline-block; width: 1rem; height: .75rem; border-radius: .25rem; background: color-mix(in srgb, var(--color-period) 26%, var(--color-surface)); border: 1.5px dashed color-mix(in srgb, var(--color-period) 60%, transparent); }
 .sw.likely { background: var(--color-period); border-color: var(--color-period); }

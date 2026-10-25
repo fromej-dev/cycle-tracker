@@ -329,9 +329,8 @@
       "ended": "Menstruatie afgelopen vandaag",
       "button": "Ongedaan maken"
     },
-    "secondaryEarlier": "Het kan ook elk moment beginnen: {range} ({pct}%)",
-    "lateMaybe": "Waarschijnlijk over ongeveer {n} dagen",
-    "lateMaybeSub": "Dat past bij een menstruatie die niet is geregistreerd. Je zit {count} dag voorbij je gebruikelijke cyclus. | Dat past bij een menstruatie die niet is geregistreerd. Je zit {count} dagen voorbij je gebruikelijke cyclus."
+    "lateAnyDay": "Het kan elk moment beginnen: {range} ({pct}%)",
+    "lateMissed": "Waarschijnlijker, als je een menstruatie niet hebt geregistreerd: rond {range}"
   },
   "forecast": {
     "confidence": {
@@ -428,8 +427,8 @@
       "range": "kans op menstruatie op minstens één van deze {n} dagen"
     },
     "timelineLabel": "Kans op bloeding per dag in de periode",
-    "legendLikely": "Meest waarschijnlijke bloedingsdagen",
-    "legendPossible": "Mogelijk, minder waarschijnlijk",
+    "legendLikely": "Vol: 50% of meer",
+    "legendPossible": "Gestreept: minder dan 50%",
     "includesPast": "Deze periode bevat dagen die al voorbij zijn. Vergelijk ze met je registraties.",
     "save": "Bewaar in mijn plannen",
     "errors": {
@@ -476,9 +475,11 @@
       "deleted": "Plan verwijderd"
     },
     "timelineTitle": "Kans op bloeding per dag",
-    "countsAny": "Dit getal telt elke dag met bloeding binnen jouw data.",
+    "countsAny": "Dit getal telt elke dag met bloeding binnen je gekozen dagen.",
+    "higherThan": "Dat is hoger dan {pct}% omdat een menstruatie die vlak voor je gekozen dagen begint, daarin nog kan doorlopen.",
+    "likelyStartLabel": "Waarschijnlijke start",
+    "peakNote": "De bloeding is meestal een paar dagen na het begin het sterkst.",
     "startNote": "Je menstruatie begint waarschijnlijk {range} ({pct}% zeker).",
-    "legendStart": "Meest waarschijnlijke startdag",
     "horizonGeneric": "Hoe verder vooruit, hoe onzekerder elke voorspelling is.",
     "reasonGeneric": "Dit is een schatting op basis van je geregistreerde cycli."
   },

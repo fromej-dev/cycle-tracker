@@ -64,11 +64,8 @@ const r80EndIdx = computed(() => idxOf(f.value?.interval_80?.end));
 const isLate = computed(
   () => !isOngoing.value && (!!f.value?.is_late || f.value?.confidence === ('overdue' as string) || (ctx.value?.days_until_next_period ?? 1) < 0),
 );
-const daysLate = computed(() => {
-  const n = ctx.value?.days_until_next_period;
-  if (typeof n === 'number' && n < 0) return -n;
-  return Math.max(1, dayNumber.value - baseLength.value);
-});
+// days since the last start minus the user's usual cycle length (cycle-context cycle_length)
+const daysLate = computed(() => Math.max(1, todayIdx.value - baseLength.value));
 
 const length = computed(() => {
   if (isLate.value) return Math.max(baseLength.value, todayIdx.value) + 9;
@@ -114,25 +111,44 @@ const dateLine = computed(() => t('today.dateLine', { date: formatDay(today, loc
 
 // A late period can also mean a forgotten log: say so in one honest line, and when that reading is the
 // likelier one the headline must not sound certain.
+// A range as text, clipped to today onward: never shows a past date, null when nothing of it is left.
+const clipText = (start: string, end: string): string | null => {
+  if (end < todayISO) return null;
+  const s = start < todayISO ? todayISO : start;
+  const bt = formatBetween(s, end, locale.value);
+  if (!bt) return null;
+  return s === end ? formatShort(end, locale.value) : `${bt.a}–${bt.b}`;
+};
 const secondary = computed(() => {
   const sw = f.value?.secondary_window;
   if (!sw || isOngoing.value) return null;
-  const bt = formatBetween(sw.start, sw.end, locale.value);
-  if (!bt) return null;
-  const range = sw.start === sw.end ? formatShort(sw.end, locale.value) : `${bt.a}–${bt.b}`;
+  const range = clipText(sw.start, sw.end);
+  if (!range) return null;
   const pct = Math.round(sw.probability * 100);
   // worded by its timing relative to the headline: an earlier window is "could also start any day now",
   // a later one is the "you may have missed logging one" reading
   const earlier = !!f.value?.most_likely_start && sw.start < f.value.most_likely_start;
-  return { earlier, text: t(earlier ? 'today.secondaryEarlier' : 'today.secondary', { range, pct }), likely: sw.probability >= 0.5 };
+  return { earlier, range, text: t('today.secondary', { range, pct }), likely: sw.probability >= 0.5 };
 });
-// late, and the headline is the "a period went unlogged" mode (further out than the any-day-now window)
-const lateMaybe = computed(() => isLate.value && !!secondary.value?.earlier && mlDaysAway.value > 3);
-const mlDaysAway = computed(() => Math.max(0, (mostLikelyIdx.value ?? 0) - todayIdx.value));
+// Late: lead with lateness, then the (up to) two readings as calm lines, ranges clipped to today onward.
+const lateLines = computed<string[]>(() => {
+  if (!isLate.value) return [];
+  const out: string[] = [];
+  const sw = f.value?.secondary_window;
+  const swPct = sw ? Math.round(sw.probability * 100) : null;
+  if (secondary.value?.earlier && swPct !== null) {
+    out.push(t('today.lateAnyDay', { range: secondary.value.range, pct: swPct }));
+    const main = f.value?.interval_50 ?? f.value?.interval_80;
+    const range = main ? clipText(main.start, main.end) : null;
+    if (range) out.push(t('today.lateMissed', { range }));
+  } else {
+    if (secondary.value) out.push(secondary.value.text);
+  }
+  return out;
+});
 
 const hero = computed(() => {
   if (isOngoing.value) return t('today.periodDayN', { n: dayNumber.value });
-  if (lateMaybe.value) return t('today.lateMaybe', { n: mlDaysAway.value });
   if (isLate.value) return t('today.daysLate', { count: daysLate.value }, daysLate.value);
   if (hasForecast.value && r80StartIdx.value !== null && r80EndIdx.value !== null) {
     const a = Math.max(0, r80StartIdx.value - todayIdx.value);
@@ -150,16 +166,15 @@ const hero = computed(() => {
 
 const sub = computed(() => {
   if (isOngoing.value) return avgPeriod.value ? t('today.periodUsually', { n: avgPeriod.value }) : null;
-  if (lateMaybe.value) return t('today.lateMaybeSub', { count: daysLate.value }, daysLate.value);
-  if (isLate.value) return t('today.laterThanUsual');
+  if (isLate.value) return lateLines.value[0] ?? t('today.laterThanUsual');
   const bt = formatBetween(f.value?.interval_80?.start, f.value?.interval_80?.end, locale.value);
   if (hasForecast.value && bt) return t('today.between', { pct: 80, a: bt.a, b: bt.b });
   return t('today.needMore');
 });
 const sub2 = computed(() => {
   if (isOngoing.value) return null;
-  if (lateMaybe.value) return null;
   if (isLate.value) {
+    if (lateLines.value.length) return lateLines.value[1] ?? null;
     const p = f.value?.probability_next_3_days;
     return p != null ? t('today.next3', { pct: Math.round(p * 100) }) : null;
   }
@@ -208,7 +223,7 @@ async function act() {
         <p class="text-[0.8125rem] text-ink-soft">{{ dateLine }}</p>
         <h1 id="today-title" class="hero-line mt-2">{{ hero }}</h1>
         <p v-if="sub" class="mt-2.5 text-[0.9375rem] leading-snug text-ink text-balance">{{ sub }}</p>
-        <p v-if="secondary" class="mt-1.5 text-[0.8125rem] leading-snug text-ink-soft text-balance">{{ secondary.text }}</p>
+        <p v-if="secondary && !isLate" class="mt-1.5 text-[0.8125rem] leading-snug text-ink-soft text-balance">{{ secondary.text }}</p>
         <p v-if="sub2" class="mt-1.5 text-[0.8125rem] leading-snug text-ink-soft text-balance">{{ sub2 }}</p>
       </template>
     </CycleRing>

@@ -16,7 +16,7 @@ export function formatDay(value: string | Date | null | undefined, localeCode = 
     return format(d, showYear ? 'EEE d MMM yyyy' : 'EEE d MMM', { locale: dfLocale(localeCode) }).replace(/\./g, '');
 }
 
-/** "12 Nov – 16 Nov" style compact range ("12–16 Nov" when same month). */
+/** "12 Nov–16 Nov" style compact range ("12–16 Nov" when same month). */
 export function formatRange(start: string | null | undefined, end: string | null | undefined, localeCode = 'en'): string | null {
     const a = start ? parseISO(start) : null;
     const b = end ? parseISO(end) : null;
@@ -27,7 +27,7 @@ export function formatRange(start: string | null | undefined, end: string | null
     const yr = b.getFullYear() !== new Date().getFullYear() ? ' yyyy' : '';
     const s = sameMonth ? format(a, 'd', { locale: loc }) : format(a, 'd MMM', { locale: loc });
     // non-breaking spaces: a date range must never wrap in the middle
-    return `${s} – ${format(b, 'd MMM' + yr, { locale: loc })}`.replace(/\./g, '').replace(/ /g, '\u00A0');
+    return `${s}–${format(b, 'd MMM' + yr, { locale: loc })}`.replace(/\./g, '').replace(/ /g, '\u00A0');
 }
 
 /** Pieces for "between {a} and {b}": ("3", "7 Nov") within one month, ("30 Oct", "2 Nov") across months. */

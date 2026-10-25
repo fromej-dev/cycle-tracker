@@ -329,9 +329,8 @@
       "ended": "Period ended today",
       "button": "Undo"
     },
-    "secondaryEarlier": "It could also start any day now: {range} ({pct}%)",
-    "lateMaybe": "Probably in about {n} days",
-    "lateMaybeSub": "That fits a period that went unlogged. You are {count} day past your usual cycle. | That fits a period that went unlogged. You are {count} days past your usual cycle."
+    "lateAnyDay": "It may start any day now: {range} ({pct}%)",
+    "lateMissed": "More likely, if you missed logging a period: around {range}"
   },
   "forecast": {
     "confidence": {
@@ -428,8 +427,8 @@
       "range": "chance of your period at some point in these {n} days"
     },
     "timelineLabel": "Chance of bleeding for each day in the range",
-    "legendLikely": "Likeliest bleeding days",
-    "legendPossible": "Possible, less likely",
+    "legendLikely": "Solid: 50% or more",
+    "legendPossible": "Dashed: under 50%",
     "includesPast": "This range includes days that already passed. Check them against your log.",
     "save": "Save to my plans",
     "errors": {
@@ -477,8 +476,10 @@
     },
     "timelineTitle": "Chance of bleeding each day",
     "countsAny": "This number counts any bleeding day within your dates.",
+    "higherThan": "That's higher than {pct}% because a period that starts just before your dates can still be going on during them.",
+    "likelyStartLabel": "Likely start",
+    "peakNote": "Bleeding usually peaks a few days after it starts.",
     "startNote": "Your period most likely starts {range} ({pct}% sure).",
-    "legendStart": "Most likely start day",
     "horizonGeneric": "The further ahead, the less certain any prediction is.",
     "reasonGeneric": "This is an estimate from your logged cycles."
   },

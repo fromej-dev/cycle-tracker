@@ -5,6 +5,8 @@ from app.utils.exceptions import BaseAppException
 from app.utils.exceptions import ValidationError as CustomValidationError
 
 from .auth_controller import auth_bp
+from .calendar_controller import calendar_bp
+from .events_controller import events_bp
 from .period_controller import period_bp
 from .report_controller import report_bp
 from .users_controller import users_bp
@@ -13,6 +15,8 @@ from .users_controller import users_bp
 def register_blueprints(app: Flask) -> None:
     """Registers all blueprints with the Flask app."""
     app.register_blueprint(auth_bp)
+    app.register_blueprint(calendar_bp)
+    app.register_blueprint(events_bp)
     app.register_blueprint(period_bp)
     app.register_blueprint(report_bp)
     app.register_blueprint(users_bp)

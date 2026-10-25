@@ -19,6 +19,9 @@ services:
       - FLASK_ENV=${FLASK_ENV:-development} # Default to development if not set in .env
       - SECRET_KEY=${SECRET_KEY}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      # Public base URL, used to return an absolute calendar-feed URL (never taken
+      # from the Host header). Leave unset to return only the /calendar/<token>.ics path.
+      # - PUBLIC_BASE_URL=https://cycle.example.com
       - DB_TYPE=${DB_TYPE:-sqlite} # Default to sqlite if not set
 
       # --- PostgreSQL Settings (only used if DB_TYPE=postgresql) ---

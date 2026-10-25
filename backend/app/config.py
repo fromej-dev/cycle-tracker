@@ -21,6 +21,10 @@ class Config:
         days=int(os.environ.get("JWT_ACCESS_TOKEN_EXPIRES", 30))
     )
 
+    # Optional externally visible base URL (e.g. https://cycle.example.com) used when
+    # building the calendar feed URL behind a reverse proxy.
+    PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL")
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     # Define database path (creates 'instance' folder if it doesn't exist)
     INSTANCE_FOLDER_PATH = basedir / "instance"

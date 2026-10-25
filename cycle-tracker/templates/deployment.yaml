@@ -37,6 +37,10 @@ spec:
           env:
             - name: SQLITE_PATH
               value: app.db
+            {{- with .Values.publicBaseUrl }}
+            - name: PUBLIC_BASE_URL
+              value: {{ . | quote }}
+            {{- end }}
           {{- with .Values.securityContext }}
           securityContext:
             {{- toYaml . | nindent 12 }}

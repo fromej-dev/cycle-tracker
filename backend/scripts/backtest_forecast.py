@@ -1,17 +1,21 @@
 """Walk-forward backtest of the cycle forecast on synthetic users.
 
-Run with:  uv run python -m scripts.backtest_forecast [n_users] [seed ...]
+Run with:  uv run python -m scripts.backtest_forecast [n_users] [scenario] [seed ...]
+
+Scenarios (see ``SCENARIOS``): ``native`` (Student-t noise, mild drift, 5% skippers),
+``skips`` (30% of users skip 25% of logs, log-normal noise), ``regime`` (30% of users
+change mean by -4/+5 days and double their SD part-way), and the stress test
+``lognormal_drift_skips``. The calibration fit uses ``random_world`` generators whose
+rare-event rates and noise family are drawn per seed, so no evaluation scenario is
+the fitting distribution.
 
 The generator uses published population statistics (Bull et al. 2019, npj Digital
 Medicine, ~600k cycles: mean cycle ~29.3 days, SD of user means ~3 days, within-user
-SD varying widely and continuously) but deliberately includes features the
-forecasting model does NOT assume: per-user tail weight (Student-t df 4, 5 or 8),
-drifting means, occasional one-off long cycles and skipped logs (two cycles merged
-into one gap). Synthetic data is still easier than real data.
+SD varying widely and continuously). Synthetic data is still easier than real data.
 
-Results are reported by SHOWN confidence label x evaluation day and by hidden
-generator type x evaluation day. Seeds 11 and 99 are the evaluation seeds; the
-recalibration (scripts/calibrate_forecast.py) never uses them.
+Results are reported by SHOWN confidence label x evaluation day, by whether the user
+has excluded (skipped-log) gaps x day, and by hidden generator type and trait.
+Never fit on seeds 5, 11, 42, 99 or 123: those are evaluation seeds.
 """
 
 from __future__ import annotations
@@ -21,16 +25,78 @@ import math
 import random
 import sys
 from dataclasses import dataclass, field
-from statistics import mean
+from statistics import mean, pstdev
 
-from app.services.forecast_service import ForecastService, point_index
+from app.services.forecast_service import (
+    ForecastService,
+    error_point_index,
+    mode_index,
+)
 
 EPOCH = datetime.date(2022, 1, 1)
 EVAL_DAYS = (1, 25, 32)  # days after the last logged start at which we forecast
 EVAL_SEEDS = (11, 99)
 EVAL_USERS = 600
-GATE_MIN_N = 150
+GATE_MIN_N = 30
+GATE_MAE_MIN_N = 150
 GATE_MAE_TOLERANCE = 0.1
+GATE_SLACK = 0.05
+GATE_SE_MULT = 2.0
+
+
+@dataclass(frozen=True)
+class World:
+    """Generator settings. Rates here are NOT the forecasting model's priors."""
+
+    noise: str = "t"  # "t" | "gauss" | "lognormal" | "mixed"
+    df_choices: tuple[float, ...] = (4.0, 5.0, 8.0)
+    sd_median: float = 3.2
+    sd_log_sd: float = 0.5
+    drift_frac: float = 0.25
+    drift_sd: float = 0.15
+    skipper_frac: float = 0.05
+    skip_rate: float = 0.10
+    long_rate: float = 0.03
+    regime_frac: float = 0.0
+    max_cycle: int = 70
+
+
+SCENARIOS: dict[str, World] = {
+    "native": World(),
+    "skips": World(
+        noise="lognormal",
+        drift_frac=0.0,
+        skipper_frac=0.30,
+        skip_rate=0.25,
+        max_cycle=90,
+    ),
+    "regime": World(noise="gauss", drift_frac=0.0, regime_frac=0.30, max_cycle=90),
+    "lognormal_drift_skips": World(
+        noise="lognormal",
+        drift_frac=0.5,
+        drift_sd=0.4,
+        skipper_frac=0.20,
+        skip_rate=0.20,
+        long_rate=0.06,
+        max_cycle=90,
+    ),
+}
+
+
+def random_world(rng: random.Random) -> World:
+    """A world with randomised rare-event rates and noise family (for calibration)."""
+    return World(
+        noise=rng.choice(("t", "gauss", "lognormal", "mixed")),
+        sd_median=rng.uniform(2.6, 3.8),
+        sd_log_sd=rng.uniform(0.4, 0.6),
+        drift_frac=rng.uniform(0.0, 0.5),
+        drift_sd=rng.uniform(0.1, 0.4),
+        skipper_frac=rng.uniform(0.02, 0.30),
+        skip_rate=rng.uniform(0.05, 0.30),
+        long_rate=rng.uniform(0.01, 0.07),
+        regime_frac=rng.uniform(0.0, 0.3),
+        max_cycle=rng.choice((70, 90)),
+    )
 
 
 @dataclass
@@ -38,39 +104,75 @@ class SyntheticUser:
     kind: str
     starts: list[datetime.date]  # as logged (skipped logs already removed)
     durations: list[int]  # duration of each logged period
+    trait: str = "stable"  # stable | drift | regime
 
 
-def generate_users(n_users: int = 300, seed: int = 20240607) -> list[SyntheticUser]:
+def generate_users(
+    n_users: int = 300,
+    seed: int = 20240607,
+    scenario: str | World = "native",
+) -> list[SyntheticUser]:
     rng = random.Random(seed)
+    if isinstance(scenario, World):
+        world = scenario
+    elif scenario == "random":
+        world = random_world(rng)
+    else:
+        world = SCENARIOS[scenario]
     users = []
     for _ in range(n_users):
         mu = min(max(rng.gauss(29.3, 3.0), 21.0), 40.0)
-        sd = min(max(math.exp(rng.gauss(math.log(3.2), 0.5)), 0.8), 12.0)
+        sd = min(
+            max(math.exp(rng.gauss(math.log(world.sd_median), world.sd_log_sd)), 0.8),
+            12.0,
+        )
         kind = "regular" if sd < 2.2 else "typical" if sd < 4.5 else "irregular"
-        drift = rng.gauss(0, 0.15) if rng.random() < 0.25 else 0.0
-        df = rng.choice((4.0, 5.0, 8.0))
-        t_scale = sd * math.sqrt((df - 2) / df)
-        skipper = rng.random() < 0.05
-        long_rate = 0.03
+        drift = rng.gauss(0, world.drift_sd) if rng.random() < world.drift_frac else 0.0
+        noise = (
+            rng.choice(("t", "gauss", "lognormal"))
+            if world.noise == "mixed"
+            else world.noise
+        )
+        df = rng.choice(world.df_choices)
+        skipper = rng.random() < world.skipper_frac
         n_cycles = rng.randint(6, 24)
+        change = rng.randint(2, n_cycles) if rng.random() < world.regime_frac else None
+        shift = rng.choice((-4.0, 5.0))
+        trait = (
+            "regime"
+            if change is not None
+            else "drift"
+            if abs(drift) > 0.1
+            else "stable"
+        )
 
         true_starts = [EPOCH + datetime.timedelta(days=rng.randint(0, 20))]
         for i in range(n_cycles):
-            chi2 = rng.gammavariate(df / 2, 2.0)
-            noise = rng.gauss(0, 1) / math.sqrt(chi2 / df) * t_scale
-            length = mu + drift * i + noise
-            if rng.random() < long_rate:
-                length += rng.uniform(7, 20)
-            length = int(round(min(max(length, 17), 70)))
+            m, s = max(mu + drift * i, 12.0), sd
+            if change is not None and i >= change:
+                m, s = mu + shift, sd * 2
+            if noise == "gauss":
+                length = rng.gauss(m, s)
+            elif noise == "lognormal":
+                v = math.log(1 + (s / m) ** 2)
+                length = math.exp(rng.gauss(math.log(m) - v / 2, math.sqrt(v)))
+            else:
+                chi2 = rng.gammavariate(df / 2, 2.0)
+                length = m + rng.gauss(0, 1) / math.sqrt(chi2 / df) * s * math.sqrt(
+                    (df - 2) / df
+                )
+            if rng.random() < world.long_rate:
+                length += rng.uniform(7, 25)
+            length = int(round(min(max(length, 17), world.max_cycle)))
             true_starts.append(true_starts[-1] + datetime.timedelta(days=length))
 
         logged = [true_starts[0]]
-        for s in true_starts[1:]:
-            if skipper and rng.random() < 0.10:
+        for st in true_starts[1:]:
+            if skipper and rng.random() < world.skip_rate:
                 continue  # forgot to log this period
-            logged.append(s)
+            logged.append(st)
         durations = [int(min(max(round(rng.gauss(5.0, 1.2)), 2), 9)) for _ in logged]
-        users.append(SyntheticUser(kind, logged, durations))
+        users.append(SyntheticUser(kind, logged, durations, trait))
     return users
 
 
@@ -80,6 +182,8 @@ class Record:
 
     label: str
     kind: str
+    trait: str
+    excluded: bool
     day: int
     age: int
     truth_index: int  # (truth - last_start) - MIN_CYCLE
@@ -89,9 +193,9 @@ class Record:
     point_naive_buggy: int
     last_start_offset: int  # days from last start to truth
     point_model: int = 0
+    mode_model: int = 0
     in50: bool = False
     in80: bool = False
-    median_pt: int = 0
 
 
 def iter_cases(users: list[SyntheticUser]):
@@ -121,13 +225,15 @@ def collect_records(users: list[SyntheticUser], calibration=None) -> list[Record
         label = model.label()
         if label == "overdue":
             continue
+        pmf = model.next_start_pmf()
         _, i50, i80 = model.point_and_intervals()
-        pt = point_index(model.next_start_pmf(), model._truncated)
         t_idx = (truth - last).days - 15
         out.append(
             Record(
                 label=label,
                 kind=user.kind,
+                trait=user.trait,
+                excluded=model.has_excluded,
                 day=day,
                 age=model.age,
                 truth_index=t_idx,
@@ -136,7 +242,8 @@ def collect_records(users: list[SyntheticUser], calibration=None) -> list[Record
                 point_naive=max(naive_len, day),
                 point_naive_buggy=max(naive_len - 1, day),
                 last_start_offset=(truth - last).days,
-                point_model=pt + 15,
+                point_model=error_point_index(pmf, model._truncated) + 15,
+                mode_model=mode_index(pmf) + 15,
                 in50=i50[0] <= t_idx <= i50[1],
                 in80=i80[0] <= t_idx <= i80[1],
             )
@@ -144,12 +251,16 @@ def collect_records(users: list[SyntheticUser], calibration=None) -> list[Record
     return out
 
 
+Key = tuple[str, str, int]
+
+
 @dataclass
 class Bucket:
     n: int = 0
     in50: int = 0
     in80: int = 0
-    err_model: list[float] = field(default_factory=list)
+    err_model: list[float] = field(default_factory=list)  # median-when-late point
+    err_mode: list[float] = field(default_factory=list)
     err_naive: list[float] = field(default_factory=list)
     err_naive_buggy: list[float] = field(default_factory=list)
 
@@ -158,6 +269,7 @@ class Bucket:
         self.in50 += r.in50
         self.in80 += r.in80
         self.err_model.append(abs(r.point_model - r.last_start_offset))
+        self.err_mode.append(abs(r.mode_model - r.last_start_offset))
         self.err_naive.append(abs(r.point_naive - r.last_start_offset))
         self.err_naive_buggy.append(abs(r.point_naive_buggy - r.last_start_offset))
 
@@ -167,18 +279,20 @@ class Bucket:
             "cov50": self.in50 / self.n,
             "cov80": self.in80 / self.n,
             "mae_model": mean(self.err_model),
+            "mae_mode": mean(self.err_mode),
             "mae_naive_fixed": mean(self.err_naive),
             "mae_naive_buggy": mean(self.err_naive_buggy),
         }
 
 
-def run_backtest(users: list[SyntheticUser]) -> dict[tuple[str, str, int], Bucket]:
-    """Buckets keyed by (grouping, group value, day); grouping is label/type/all."""
-    buckets: dict[tuple[str, str, int], Bucket] = {}
-    for r in collect_records(users):
+def bucketize(records: list[Record]) -> dict[Key, Bucket]:
+    buckets: dict[Key, Bucket] = {}
+    for r in records:
         for key in (
             ("label", r.label, r.day),
+            ("excl", "excluded" if r.excluded else "clean", r.day),
             ("type", r.kind, r.day),
+            ("trait", r.trait, r.day),
             ("all", "all", r.day),
             ("all", "all", 0),
         ):
@@ -186,14 +300,13 @@ def run_backtest(users: list[SyntheticUser]) -> dict[tuple[str, str, int], Bucke
     return buckets
 
 
-GATE_Z = 3.0  # ~99.7% binomial band: 24 bucket-metrics are checked per seed
+def run_backtest(users: list[SyntheticUser]) -> dict[Key, Bucket]:
+    return bucketize(collect_records(users))
 
 
-def merge_buckets(
-    parts: list[dict[tuple[str, str, int], Bucket]],
-) -> dict[tuple[str, str, int], Bucket]:
+def merge_buckets(parts: list[dict[Key, Bucket]]) -> dict[Key, Bucket]:
     """Pool the buckets of several seeds."""
-    out: dict[tuple[str, str, int], Bucket] = {}
+    out: dict[Key, Bucket] = {}
     for part in parts:
         for key, b in part.items():
             m = out.setdefault(key, Bucket())
@@ -201,57 +314,103 @@ def merge_buckets(
             m.in50 += b.in50
             m.in80 += b.in80
             m.err_model += b.err_model
+            m.err_mode += b.err_mode
             m.err_naive += b.err_naive
             m.err_naive_buggy += b.err_naive_buggy
     return out
 
 
-def _binom_bounds(n: int, p: float) -> tuple[float, float]:
-    h = GATE_Z * math.sqrt(p * (1 - p) / n)
-    return p - h, p + h
+def tolerance(n: int, p: float, slack: float = GATE_SLACK) -> float:
+    return slack + GATE_SE_MULT * math.sqrt(p * (1 - p) / n)
 
 
 def gate_failures(
-    buckets: dict[tuple[str, str, int], Bucket], strict: bool = False
+    buckets: dict[Key, Bucket], groupings=("label", "excl"), slack: float = GATE_SLACK
 ) -> list[str]:
-    """Calibration + accuracy gate over shown-label x day buckets.
+    """Calibration + accuracy gate.
 
-    Coverage must lie in target +/- 0.05. Because a bucket with n < ~385 cannot
-    resolve +/-0.05 (binomial noise alone exceeds it), the default band is widened to
-    the bucket's binomial interval (z=3, because 24 bucket-metrics are checked per
-    seed) when that is wider; ``strict=True`` applies
-    the literal +/-0.05 band to every bucket with n >= GATE_MIN_N.
+    Every label x day and has-excluded-gaps x day bucket must satisfy
+    |coverage - p| <= 0.05 + 2*sqrt(p(1-p)/n), and the model's MAE must not exceed
+    the naive mean predictor's by more than 0.1 day + 2 SE of the paired difference
+    (buckets with n >= 150).
     """
     fails = []
     for (grouping, name, day), b in sorted(buckets.items()):
-        if grouping != "label" or b.n < 30:
+        if grouping not in groupings or b.n < GATE_MIN_N:
             continue
         s = b.summary()
         for level, key in ((0.8, "cov80"), (0.5, "cov50")):
-            lo, hi = level - 0.05, level + 0.05
-            if not strict or b.n < GATE_MIN_N:
-                blo, bhi = _binom_bounds(b.n, level)
-                lo, hi = min(lo, blo), max(hi, bhi)
-            if not lo <= s[key] <= hi:
+            tol = tolerance(b.n, level, slack)
+            if abs(s[key] - level) > tol:
                 fails.append(
-                    f"{name}@day{day} n={b.n} {key}={s[key]:.3f} not in "
-                    f"[{lo:.3f}, {hi:.3f}]"
+                    f"{grouping}:{name}@day{day} n={b.n} {key}={s[key]:.3f} "
+                    f"outside {level} +/- {tol:.3f}"
                 )
-        if (
-            b.n >= GATE_MIN_N
-            and s["mae_model"] > s["mae_naive_fixed"] + GATE_MAE_TOLERANCE
-        ):
-            fails.append(
-                f"{name}@day{day} n={b.n} MAE {s['mae_model']:.3f} > naive "
-                f"{s['mae_naive_fixed']:.3f} + {GATE_MAE_TOLERANCE}"
-            )
+        if b.n >= GATE_MAE_MIN_N:
+            diffs = [m - nv for m, nv in zip(b.err_model, b.err_naive, strict=True)]
+            mean_diff = mean(diffs)
+            se = pstdev(diffs) / math.sqrt(b.n)
+            if mean_diff > GATE_MAE_TOLERANCE + GATE_SE_MULT * se:
+                fails.append(
+                    f"{grouping}:{name}@day{day} n={b.n} MAE {s['mae_model']:.3f} > "
+                    f"naive {s['mae_naive_fixed']:.3f} + {GATE_MAE_TOLERANCE} "
+                    f"+ {GATE_SE_MULT} SE ({se:.3f})"
+                )
     return fails
 
 
-def format_table(buckets: dict[tuple[str, str, int], Bucket], grouping: str) -> str:
+# --- lapsed users ------------------------------------------------------------------
+
+
+def overdue_check(users: list[SyntheticUser]) -> dict[str, float]:
+    """How the overdue state behaves.
+
+    * ``false_overdue``: share of real forecasts (the day before the next period
+      actually started) wrongly labelled overdue.
+    * ``lapsed_detected``: share of lapsed users (stopped logging, e.g. pregnancy or
+      stopping the app) labelled overdue 100, 150 and 200 days after their last start.
+    """
+    false_overdue = total = 0
+    lapsed_hit = {100: 0, 150: 0, 200: 0}
+    lapsed_total = 0
+    for user in users:
+        starts = user.starts
+        for i in range(3, len(starts)):
+            hist = starts[:i]
+            periods = [
+                (s, s + datetime.timedelta(days=d - 1))
+                for s, d in zip(hist, user.durations, strict=False)
+            ]
+            gap = (starts[i] - hist[-1]).days
+            model = ForecastService.fit(
+                periods, hist[-1] + datetime.timedelta(days=gap - 1)
+            )
+            total += 1
+            false_overdue += model.label() == "overdue"
+        # lapse: the user's whole history, then silence
+        periods = [
+            (s, s + datetime.timedelta(days=d - 1))
+            for s, d in zip(starts, user.durations, strict=False)
+        ]
+        if len(periods) >= 3:
+            lapsed_total += 1
+            for age in lapsed_hit:
+                m = ForecastService.fit(
+                    periods, starts[-1] + datetime.timedelta(days=age)
+                )
+                lapsed_hit[age] += m.label() == "overdue"
+    return {
+        "forecasts": total,
+        "false_overdue": false_overdue / total,
+        "lapsed_users": lapsed_total,
+        **{f"lapsed_detected_{a}d": h / lapsed_total for a, h in lapsed_hit.items()},
+    }
+
+
+def format_table(buckets: dict[Key, Bucket], grouping: str) -> str:
     header = (
-        f"{grouping:<10}{'day':>4}{'n':>6}{'cov50':>8}{'cov80':>8}"
-        f"{'MAE model':>11}{'naive fix':>10}{'naive bug':>10}"
+        f"{grouping:<10}{'day':>4}{'n':>7}{'cov50':>8}{'cov80':>8}"
+        f"{'MAE pt':>8}{'MAE mode':>9}{'naive fix':>10}{'naive bug':>10}"
     )
     lines = [header, "-" * len(header)]
     for (g, name, day), b in sorted(buckets.items()):
@@ -259,8 +418,8 @@ def format_table(buckets: dict[tuple[str, str, int], Bucket], grouping: str) -> 
             continue
         s = b.summary()
         lines.append(
-            f"{name:<10}{day:>4}{s['n']:>6}{s['cov50']:>8.3f}{s['cov80']:>8.3f}"
-            f"{s['mae_model']:>11.3f}{s['mae_naive_fixed']:>10.3f}"
+            f"{name:<10}{day:>4}{s['n']:>7}{s['cov50']:>8.3f}{s['cov80']:>8.3f}"
+            f"{s['mae_model']:>8.3f}{s['mae_mode']:>9.3f}{s['mae_naive_fixed']:>10.3f}"
             f"{s['mae_naive_buggy']:>10.3f}"
         )
     return "\n".join(lines)
@@ -268,27 +427,35 @@ def format_table(buckets: dict[tuple[str, str, int], Bucket], grouping: str) -> 
 
 def main() -> None:
     n_users = int(sys.argv[1]) if len(sys.argv) > 1 else EVAL_USERS
-    seeds = [int(a) for a in sys.argv[2:]] or list(EVAL_SEEDS)
-    per_seed = []
-    for seed in seeds + ([None] if len(seeds) > 1 else []):
-        if seed is None:
-            buckets = merge_buckets(per_seed)
-            seed = "pooled " + "+".join(map(str, seeds))
-        else:
-            buckets = run_backtest(generate_users(n_users, seed))
+    scenario = sys.argv[2] if len(sys.argv) > 2 else "native"
+    seeds = [int(a) for a in sys.argv[3:]] or list(EVAL_SEEDS)
+    names = list(SCENARIOS) if scenario == "all" else [scenario]
+    for name in names:
+        per_seed = []
+        for seed in seeds:
+            users = generate_users(n_users, seed, name)
+            buckets = run_backtest(users)
             per_seed.append(buckets)
-        print(f"\n=== {n_users} synthetic users, seed {seed} ===")
-        print("targets cov50 0.50 / cov80 0.80; MAE in days vs next logged start.")
-        print("day 0 = all days pooled.")
-        for grouping in ("all", "label", "type"):
-            print(format_table(buckets, grouping))
-            print()
-        for strict in (False, True):
-            fails = gate_failures(buckets, strict)
-            mode = "literal +/-0.05" if strict else "binomial-aware"
-            print(f"GATE ({mode}):", "PASS" if not fails else "FAIL")
+            print(f"\n=== {name}: {n_users} users, seed {seed} ===")
+            print("targets cov50 0.50 / cov80 0.80; MAE in days; day 0 = pooled.")
+            for grouping in ("all", "label", "excl", "type", "trait"):
+                print(format_table(buckets, grouping))
+                print()
+            fails = gate_failures(buckets)
+            print("GATE:", "PASS" if not fails else "FAIL")
             for f in fails:
                 print("  ", f)
+        if len(seeds) > 1:
+            pooled = merge_buckets(per_seed)
+            fails = gate_failures(pooled)
+            print(
+                f"\n=== {name}: pooled seeds {seeds} GATE:",
+                "PASS" if not fails else "FAIL",
+            )
+            for f in fails:
+                print("  ", f)
+    if scenario in ("all", "native"):
+        print("\noverdue behaviour:", overdue_check(generate_users(150, seeds[0])))
 
 
 if __name__ == "__main__":

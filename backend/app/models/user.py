@@ -16,9 +16,30 @@ class User(BaseModel):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)  # Increased length
 
+    # Private calendar feed (ICS subscription). Only the SHA-256 hash of the secret
+    # URL token is stored; the token itself is shown to the user once.
+    calendar_token_hash = db.Column(db.String(64), unique=True, index=True)
+    calendar_label = db.Column(db.String(40))  # None -> discreet default label
+    calendar_fertile_label = db.Column(db.String(40))  # None -> same as calendar_label
+    calendar_mark_estimate = db.Column(
+        db.Boolean, nullable=False, default=False, server_default=db.false()
+    )
+    # IANA time zone of the subscriber, so the feed's "today" is theirs.
+    calendar_timezone = db.Column(db.String(64))
+    # JSON bookkeeping for stable event identities / per-event SEQUENCE (see
+    # CalendarService); updated with compare-and-swap, never by the ORM flush.
+    calendar_state = db.Column(db.Text)
+    calendar_include_fertile = db.Column(
+        db.Boolean, nullable=False, default=False, server_default=db.false()
+    )
+
     # Relationship to periods (one-to-many)
     periods = db.relationship(
         "Period", back_populates="user", lazy=True, cascade="all, delete-orphan"
+    )
+
+    planned_events = db.relationship(
+        "PlannedEvent", back_populates="user", lazy=True, cascade="all, delete-orphan"
     )
 
     def set_password(self, password: str) -> None:

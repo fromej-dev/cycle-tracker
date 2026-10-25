@@ -57,6 +57,8 @@ class CycleContextSchema(Schema):
     fertile_window = fields.Nested(FertileWindowSchema, required=True)
     is_today_ovulation = fields.Boolean(required=True)
     is_in_fertile_window = fields.Boolean(required=True)
+    is_late = fields.Boolean(load_default=False)
+    confidence = fields.String(allow_none=True)
 
 
 class OvulationWindowSchema(Schema):
@@ -88,6 +90,7 @@ class ForecastSchema(Schema):
     """Probabilistic forecast of the next period start."""
 
     most_likely_start = fields.Date(allow_none=True)
+    median_start = fields.Date(allow_none=True)
     interval_50 = fields.Nested(DateIntervalSchema, allow_none=True)
     interval_80 = fields.Nested(DateIntervalSchema, allow_none=True)
     probability_next_3_days = fields.Float(allow_none=True)
@@ -100,3 +103,9 @@ class ForecastSchema(Schema):
     days = fields.List(fields.Nested(ForecastDaySchema), required=True)
     fertile_window = fields.Nested(ForecastFertileWindowSchema, allow_none=True)
     is_late = fields.Boolean(required=True)
+
+
+class TodayQuerySchema(Schema):
+    """Optional client-local date; forecasts are conditioned on it."""
+
+    today = fields.Date(load_default=None)

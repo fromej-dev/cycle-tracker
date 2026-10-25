@@ -52,9 +52,18 @@ SIGMA_GRID = [1.0 * 1.253**i for i in range(12)]  # ~1 .. ~12 days
 MU_GRID = [17.0 + 0.5 * i for i in range(67)] + [51.0 + i for i in range(30)]
 MAX_MU_GROUPS = 16
 
-DISRUPTED_PRIOR = 0.04  # P(cycle is disrupted/very long)
+DISRUPTED_PRIOR = 0.04  # prior mean P(cycle is disrupted/very long); updated per user
+DISRUPTED_PRIOR_N = 12.5  # prior pseudo-gaps behind that mean
+# Skipped logs (two cycles merged into one gap): a two-class model of the user's skip
+# habit. Most users almost never skip; a minority skips often. Their own count of
+# excluded long gaps decides which class is likely.
+SKIP_CLASS_PRIOR = 0.10  # P(user is a habitual skipper)
+SKIP_RATE_HABITUAL = 0.20
+SKIP_RATE_RARE = 0.004
+MAX_SKIP_WEIGHT = 0.4
+MAX_DISRUPTED_WEIGHT = 0.25
 DISRUPTED_MIN = 30
-DISRUPTED_SCALE = 20.0  # days, exponential hazard beyond DISRUPTED_MIN
+DISRUPTED_SCALES = ((0.7, 6.0), (0.3, 25.0))  # (share, days): short slip / long gap
 
 PRIOR_DURATION_MEAN = 5.0
 PRIOR_DURATION_KAPPA = 1.5
@@ -71,22 +80,64 @@ LUTEAL_MEAN = 14.0
 LUTEAL_SD = 2.0
 SD_THRESHOLDS = (2.5, 4.5)  # regular / variable / irregular
 LEARNING_CYCLES = 3
+MIN_INTENSITY_HORIZON = 400  # intensities are computed once for at least this
 
-# Tempering exponents T keyed by (confidence label, age bin): p -> p**(1/T).
-# Fitted by scripts/calibrate_forecast.py (seeds disjoint from evaluation seeds).
-CALIBRATION: dict[tuple[str, int], float] = {
-    ("irregular", 0): 1.0,
-    ("irregular", 1): 0.95,
-    ("irregular", 2): 0.9,
-    ("learning", 0): 1.0,
-    ("learning", 1): 1.0,
-    ("learning", 2): 0.95,
-    ("regular", 0): 0.85,
-    ("regular", 1): 0.8,
-    ("regular", 2): 0.85,
-    ("variable", 0): 0.95,
-    ("variable", 1): 0.95,
-    ("variable", 2): 0.9,
+# Recalibration keyed by (confidence label, age bin, has-excluded-gaps), fitted by
+# scripts/calibrate_forecast.py on randomised synthetic worlds (never evaluation seeds).
+# CALIBRATION: tempering exponent T, p -> p**(1/T), set so the 80% interval covers 80%.
+CALIBRATION: dict[tuple[str, int, bool], float] = {
+    ("irregular", 0, False): 1.15,
+    ("irregular", 0, True): 1.05,
+    ("irregular", 1, False): 1.1,
+    ("irregular", 1, True): 1.0,
+    ("irregular", 2, False): 1.15,
+    ("irregular", 2, True): 0.95,
+    ("learning", 0, False): 1.15,
+    ("learning", 0, True): 1.0,
+    ("learning", 1, False): 1.15,
+    ("learning", 1, True): 1.0,
+    ("learning", 2, False): 1.1,
+    ("learning", 2, True): 1.0,
+    ("regular", 0, False): 1.0,
+    ("regular", 0, True): 0.95,
+    ("regular", 1, False): 1.0,
+    ("regular", 1, True): 0.95,
+    ("regular", 2, False): 1.05,
+    ("regular", 2, True): 1.0,
+    ("variable", 0, False): 1.1,
+    ("variable", 0, True): 1.0,
+    ("variable", 1, False): 1.15,
+    ("variable", 1, True): 0.95,
+    ("variable", 2, False): 1.1,
+    ("variable", 2, True): 0.9,
+}
+
+# CALIBRATION_Q50: model mass of the displayed "50%" interval, set so it covers 50%.
+CALIBRATION_Q50: dict[tuple[str, int, bool], float] = {
+    ("irregular", 0, False): 0.5,
+    ("irregular", 0, True): 0.54,
+    ("irregular", 1, False): 0.5,
+    ("irregular", 1, True): 0.52,
+    ("irregular", 2, False): 0.48,
+    ("irregular", 2, True): 0.52,
+    ("learning", 0, False): 0.48,
+    ("learning", 0, True): 0.56,
+    ("learning", 1, False): 0.48,
+    ("learning", 1, True): 0.52,
+    ("learning", 2, False): 0.46,
+    ("learning", 2, True): 0.48,
+    ("regular", 0, False): 0.46,
+    ("regular", 0, True): 0.46,
+    ("regular", 1, False): 0.46,
+    ("regular", 1, True): 0.48,
+    ("regular", 2, False): 0.4,
+    ("regular", 2, True): 0.46,
+    ("variable", 0, False): 0.5,
+    ("variable", 0, True): 0.52,
+    ("variable", 1, False): 0.48,
+    ("variable", 1, True): 0.52,
+    ("variable", 2, False): 0.48,
+    ("variable", 2, True): 0.52,
 }
 
 
@@ -153,8 +204,15 @@ def _grid() -> tuple[_GridComp, ...]:
 
 @functools.lru_cache(maxsize=1)
 def _disrupted_pmf() -> tuple[float, ...]:
+    """Late/disrupted cycle: starts at least DISRUPTED_MIN days, slow exponential tail.
+
+    70% of the mass is a short slip (scale 6 days: a few days late), 30% a long
+    disruption (scale 25 days).
+    """
     raw = [
-        math.exp(-(k - DISRUPTED_MIN) / DISRUPTED_SCALE) if k >= DISRUPTED_MIN else 0.0
+        sum(w * math.exp(-(k - DISRUPTED_MIN) / sc) / sc for w, sc in DISRUPTED_SCALES)
+        if k >= DISRUPTED_MIN
+        else 0.0
         for k in range(MIN_CYCLE, MAX_CYCLE + 1)
     ]
     t = sum(raw)
@@ -162,14 +220,53 @@ def _disrupted_pmf() -> tuple[float, ...]:
 
 
 @dataclass(frozen=True)
+class StartGroup:
+    """One latent group of the start-time mixture (see ``start_intensities``)."""
+
+    weight: float  # mixture weight of the group for the next gap
+    u: list[float]  # P(a period starts on day offset s) through this group
+    step: list[tuple[int, float]]  # normalised cycle-length pmf: (length, prob)
+
+    def p_longer(self, n: int) -> float:
+        """P(cycle length > n) for this group."""
+        return sum(p for length, p in self.step if length > n)
+
+
+@dataclass(frozen=True)
 class _CycleFit:
     groups: tuple[tuple[float, tuple[float, ...]], ...]  # (weight, pmf) per mu group
-    main: tuple[float, ...]  # posterior predictive without the disrupted component
+    main: tuple[float, ...]  # posterior predictive of an ordinary cycle
+    skip2: tuple[float, ...]  # a skipped log: two ordinary cycles merged into one gap
+    pi_skip: float  # P(next logged gap swallows a skipped log)
+    pi_disrupted: float  # P(next cycle is disrupted/very long)
+
+
+def _skip_probability(n_skipped: int, n_gaps: int) -> float:
+    """Posterior mean rate of skipped logs under the two-class skip-habit model."""
+    s, r = SKIP_RATE_HABITUAL, SKIP_RATE_RARE
+    log_hab = n_skipped * math.log(s) + (n_gaps - n_skipped) * math.log(1 - s)
+    log_rare = n_skipped * math.log(r) + (n_gaps - n_skipped) * math.log(1 - r)
+    odds = SKIP_CLASS_PRIOR / (1 - SKIP_CLASS_PRIOR) * math.exp(log_hab - log_rare)
+    p_hab = odds / (1 + odds)
+    return p_hab * s + (1 - p_hab) * r
+
+
+def _upward_outliers(cycles: tuple[int, ...]) -> int:
+    if len(cycles) < 4:
+        return 0
+    med = median(cycles)
+    mad = median([abs(c - med) for c in cycles])
+    scale = max(1.4826 * mad, 2.0)
+    return sum(1 for c in cycles if (c - med) / scale > HUBER_C)
 
 
 @functools.lru_cache(maxsize=2048)
-def _fit_cycles(cycles: tuple[int, ...]) -> _CycleFit:
-    """Posterior over the (mu, sigma) grid for chronological cycle lengths."""
+def _fit_cycles(cycles: tuple[int, ...], n_excluded: int = 0) -> _CycleFit:
+    """Posterior over the (mu, sigma) grid for chronological cycle lengths.
+
+    ``n_excluded`` is how many gaps were thrown out as forgotten logs; together with
+    the number of upward outliers it sets this user's own skip/disruption weights.
+    """
     weights = _cycle_weights(list(cycles))
     comps = _grid()
     logw = []
@@ -206,7 +303,25 @@ def _fit_cycles(cycles: tuple[int, ...]) -> _CycleFit:
         for j, v in enumerate(arr):
             main[j] += v
         groups.append((gw, tuple(v / gw for v in arr)))
-    return _CycleFit(tuple(groups), tuple(main))
+
+    # A skipped log merges two cycles: sum of two draws from the ordinary predictive.
+    skip2 = [0.0] * n_pmf
+    for i, a in enumerate(main):
+        if a < 1e-7:
+            continue
+        for j in range(n_pmf - MIN_CYCLE - i):
+            skip2[i + j + MIN_CYCLE] += a * main[j]
+    t = sum(skip2)
+    skip2 = [v / t for v in skip2]
+
+    n_gaps = len(cycles) + n_excluded
+    pi_skip = min(_skip_probability(n_excluded, n_gaps), MAX_SKIP_WEIGHT)
+    pi_dis = min(
+        (DISRUPTED_PRIOR * DISRUPTED_PRIOR_N + _upward_outliers(cycles))
+        / (DISRUPTED_PRIOR_N + n_gaps),
+        MAX_DISRUPTED_WEIGHT,
+    )
+    return _CycleFit(tuple(groups), tuple(main), tuple(skip2), pi_skip, pi_dis)
 
 
 # --- Duration model ------------------------------------------------------------------
@@ -298,12 +413,20 @@ def _temper(pmf: list[float], temperature: float) -> list[float]:
     return [v / t for v in out]
 
 
+def mode_index(pmf: list[float]) -> int:
+    return max(range(len(pmf)), key=lambda i: (pmf[i], -i))
+
+
 def point_and_intervals(
-    pmf: list[float], truncated: bool
+    pmf: list[float], truncated: bool = False, q50: float = 0.5
 ) -> tuple[int, tuple[int, int, float], tuple[int, int, float]]:
-    """Point estimate plus nested 50% and 80% index intervals containing it."""
-    pt = point_index(pmf, truncated)
-    i50 = _hdi(pmf, 0.5, pt)
+    """Mode plus nested 50% and 80% index intervals that contain it.
+
+    ``q50`` is the model mass of the "50%" interval; recalibration lowers it where
+    day-discretisation and a pinned mode make a 0.5-mass interval over-cover.
+    """
+    pt = mode_index(pmf)
+    i50 = _hdi(pmf, q50, pt)
     i80 = _hdi(pmf, 0.8, pt)
     if i80[0] > i50[0] or i80[1] < i50[1]:  # keep nested
         s, e = min(i80[0], i50[0]), max(i80[1], i50[1])
@@ -311,13 +434,18 @@ def point_and_intervals(
     return pt, i50, i80
 
 
-def point_index(pmf: list[float], truncated: bool) -> int:
-    """Mode, or the median when the mode is pinned to today's truncation edge."""
-    mode = max(range(len(pmf)), key=lambda i: (pmf[i], -i))
-    first = next(i for i, p in enumerate(pmf) if p > 0)
-    if truncated and mode == first:
-        return _median_index(pmf)
-    return mode
+def error_point_index(pmf: list[float], truncated: bool = False) -> int:
+    """Best single-date guess for absolute error: the median of the distribution.
+
+    ``most_likely_start`` is the mode (what is most probable); the median
+    (``median_start``) minimises expected absolute error, and is what backtests
+    use for MAE.
+    """
+    return _median_index(pmf)
+
+
+# Backwards-compatible name.
+point_index = error_point_index
 
 
 # --- Data cleaning ----------------------------------------------------------------------
@@ -366,8 +494,12 @@ class FittedModel:
         self,
         periods: list[PeriodTuple],
         today: datetime.date,
-        calibration: dict[tuple[str, int], float] | None = None,
+        calibration: dict[tuple[str, int, bool], float] | None = None,
     ):
+        # A period dated tomorrow means the client's clock is ahead of the server's
+        # (time zones): treat it as started rather than ignoring it.
+        if periods and max(p[0] for p in periods) == today + datetime.timedelta(days=1):
+            today = today + datetime.timedelta(days=1)
         self.today = today
         self.calibration = CALIBRATION if calibration is None else calibration
         self.periods = _clean_periods(periods)
@@ -378,7 +510,7 @@ class FittedModel:
 
         cycles, self.cycles_excluded = _cycle_lengths(self.starts)
         self.cycles_used = len(cycles)
-        self._fit = _fit_cycles(tuple(cycles))
+        self._fit = _fit_cycles(tuple(cycles), self.cycles_excluded)
         durations = [
             (e - s).days + 1
             for s, e in self.periods
@@ -404,14 +536,18 @@ class FittedModel:
 
         mean_cycle, self._main_sd = _mean_sd(self._fit.main, MIN_CYCLE)
         self.mean_cycle = mean_cycle
-        # Full unconditioned cycle distribution = main + disrupted component.
+        # Full unconditioned next-gap distribution: ordinary cycle, a skipped log
+        # (two cycles merged), or a disrupted/very long cycle, with per-user weights.
+        f = self._fit
+        self.pi_skip, self.pi_disrupted = f.pi_skip, f.pi_disrupted
+        w_main = 1 - f.pi_skip - f.pi_disrupted
         dis = _disrupted_pmf()
         self._unc = [
-            (1 - DISRUPTED_PRIOR) * m + DISRUPTED_PRIOR * d
-            for m, d in zip(self._fit.main, dis, strict=True)
+            w_main * m + f.pi_disrupted * d + f.pi_skip * k
+            for m, d, k in zip(f.main, dis, f.skip2, strict=True)
         ]
         self._build_start_pmf()
-        self._intensity_cache: tuple[int, list[float]] | None = None
+        self._intensity_cache: tuple[int, list[StartGroup]] | None = None
 
     # --- cycle-length / next-start distributions -------------------------------
 
@@ -425,17 +561,29 @@ class FittedModel:
         )
 
     def label(self) -> str:
+        return self._label
+
+    confidence = label
+
+    def _compute_label(self) -> str:
         if self.overdue:
             return "overdue"
         if self.cycles_used < LEARNING_CYCLES:
             return "learning"
-        if self._main_sd <= SD_THRESHOLDS[0]:
+        sd = self._main_sd
+        if self._is_late():
+            # Late: the spread that matters is the conditioned one, not the ordinary one.
+            sd = max(sd, _mean_sd(self._raw, MIN_CYCLE)[1])
+        if sd <= SD_THRESHOLDS[0]:
             return "regular"
-        if self._main_sd <= SD_THRESHOLDS[1]:
+        if sd <= SD_THRESHOLDS[1]:
             return "variable"
         return "irregular"
 
-    confidence = label
+    @property
+    def has_excluded(self) -> bool:
+        """True if some of this user's gaps looked like forgotten logs."""
+        return self.cycles_excluded > 0
 
     def predictive_sd(self) -> float:
         """SD (days) of the ordinary cycle-length predictive (excludes disruptions)."""
@@ -452,14 +600,22 @@ class FittedModel:
             mass = sum(tail)
             if mass < 1e-9:
                 self._raw = list(unc)
-                self._no_mass = True
                 self._truncated = False
             else:
                 self._raw = [0.0] * first + [v / mass for v in tail]
-        self._no_mass = getattr(self, "_no_mass", False)
-        key = (self.label(), age_bin(self.age))
-        self._temperature = self.calibration.get(key, 1.0)
+        self._label = self._compute_label()
+        bin_ = age_bin(self.age)
+        cal = self.calibration
+        excl = self.has_excluded
+        self._temperature = cal.get(
+            (self._label, bin_, excl), cal.get((self._label, bin_, False), 1.0)
+        )
         self._p1 = _temper(self._raw, self._temperature)
+        self._q50 = (
+            CALIBRATION_Q50.get((self._label, bin_, excl), 0.5)
+            if self.calibration is CALIBRATION
+            else 0.5
+        )
 
     def raw_next_start_pmf(self) -> list[float]:
         """Conditioned (on today) but not recalibrated; index = length - MIN_CYCLE."""
@@ -489,20 +645,51 @@ class FittedModel:
         mean_dur = sum((MIN_DURATION + i) * p for i, p in enumerate(self._duration_pmf))
         return mean_dur / self.mean_cycle
 
-    def _intensity(self, horizon: int) -> list[float]:
-        """Expected number of future period starts on each day offset (cycles >= 1).
+    def start_intensities(self, horizon: int) -> list[StartGroup]:
+        """Per latent group: when periods start, and that group's cycle-length pmf.
 
-        Offsets are days after ``last_start``. The first cycle uses the conditioned,
-        recalibrated distribution; later cycles convolve each mu group's cycle pmf, so
-        the shared uncertainty about the user's mean grows with horizon.
+        One :class:`StartGroup` per mean-group of the posterior, plus the disrupted
+        and skipped-log groups. ``u[s]`` is the probability that a future period
+        (first or later cycle, offsets are days after the last logged start) starts
+        on day ``s`` through this group, so ``sum(g.u[s] for g in groups)`` is the
+        combined start intensity (see :meth:`intensity`). ``step`` is the group's
+        normalised cycle-length pmf, for questions like "no period starts in
+        (s, b]" -> ``P(L > b - s)`` via :meth:`StartGroup.p_longer`.
+
+        Computed once for ``max(horizon, MIN_INTENSITY_HORIZON)`` days and cached, so
+        repeated calls in any order are cheap. Offsets beyond ``horizon`` are cut.
         """
-        if self._intensity_cache and self._intensity_cache[0] >= horizon:
-            return self._intensity_cache[1]
-        u = [0.0] * (horizon + 1)
-        groups = [((1 - DISRUPTED_PRIOR) * w, pmf) for w, pmf in self._fit.groups] + [
-            (DISRUPTED_PRIOR, _disrupted_pmf())
+        if self._intensity_cache is None or self._intensity_cache[0] < horizon:
+            self._intensity_cache = self._compute_groups(
+                max(horizon, MIN_INTENSITY_HORIZON)
+            )
+        return [
+            StartGroup(g.weight, g.u[: horizon + 1], g.step)
+            for g in self._intensity_cache[1]
         ]
+
+    def intensity(self, horizon: int) -> list[float]:
+        """Expected number of future period starts on each day offset (cycles >= 1)."""
+        groups = self.start_intensities(horizon)
+        return [sum(g.u[d] for g in groups) for d in range(horizon + 1)]
+
+    def _intensity(self, horizon: int) -> list[float]:
+        return self.intensity(horizon)
+
+    def _compute_groups(self, horizon: int) -> tuple[int, list[StartGroup]]:
+        """The first cycle uses the conditioned, recalibrated distribution; later
+        cycles convolve each group's cycle pmf, so the shared uncertainty about the
+        user's mean grows with horizon."""
+        f = self._fit
+        w_main = 1 - f.pi_skip - f.pi_disrupted
+        groups = (
+            [(w_main * w, pmf) for w, pmf in f.groups]
+            + [(f.pi_disrupted, _disrupted_pmf())]
+            + [(f.pi_skip, f.skip2)]
+        )
+        out = []
         for w, pmf in groups:
+            u = [0.0] * (horizon + 1)
             step = [(MIN_CYCLE + i, v) for i, v in enumerate(pmf) if v > 2e-5]
             norm = sum(v for _, v in step)
             step = [(length, v / norm) for length, v in step]
@@ -529,8 +716,33 @@ class FittedModel:
                             break
                         nxt[d + length] += v * p
                 cur = nxt
-        self._intensity_cache = (horizon, u)
-        return u
+            out.append(StartGroup(w, u, step))
+        return horizon, out
+
+    # --- period length (public) ------------------------------------------------
+
+    def duration_cdf(self, k: int) -> float:
+        """P(period lasts at most ``k`` days), ``k`` >= 0."""
+        return 1.0 - self.duration_survival(k)
+
+    def duration_survival(self, k: int) -> float:
+        """P(period lasts more than ``k`` days), ``k`` >= 0."""
+        if k < MIN_DURATION:
+            return 1.0
+        return sum(self._duration_pmf[k - MIN_DURATION + 1 :])
+
+    def ongoing_duration_cdf(self, k: int, days_so_far: int) -> float:
+        """P(duration <= k | the period is still going after ``days_so_far`` days).
+
+        For an open period that is under way (``days_so_far`` = days bled so far,
+        including today). Returns 1.0 for k beyond the longest plausible period.
+        """
+        alive = self.duration_survival(days_so_far - 1)  # P(D >= days_so_far)
+        if alive <= 1e-12:
+            return 1.0 if k >= days_so_far else 0.0
+        if k < days_so_far:
+            return 0.0
+        return 1.0 - self.duration_survival(k) / alive
 
     def _logged_bleeding_days(self) -> set[datetime.date]:
         days: set[datetime.date] = set()
@@ -545,6 +757,10 @@ class FittedModel:
                 s + datetime.timedelta(days=k) for k in range((end - s).days + 1)
             )
         return days
+
+    @property
+    def ongoing(self) -> bool:
+        return self._ongoing()
 
     def _ongoing(self) -> bool:
         if self.last_start is None:
@@ -569,7 +785,7 @@ class FittedModel:
         surv = self._survival()
         logged = self._logged_bleeding_days()
         horizon = max(max((d - self.last_start).days for d in dates), MIN_CYCLE)
-        u = [0.0] * (horizon + 1) if self.overdue else self._intensity(horizon)
+        u = [0.0] * (horizon + 1) if self.overdue else self.intensity(horizon)
         ongoing_no_end = self.last_end is None and self._ongoing()
         out: dict[datetime.date, float] = {}
         for d in dates:
@@ -603,7 +819,7 @@ class FittedModel:
     def point_and_intervals(
         self,
     ) -> tuple[int, tuple[int, int, float], tuple[int, int, float]]:
-        return point_and_intervals(self._p1, self._truncated)
+        return point_and_intervals(self._p1, self._truncated, self._q50)
 
     def _is_late(self) -> bool:
         """Today is beyond the 90th percentile of the unconditioned cycle length."""
@@ -633,6 +849,7 @@ class FittedModel:
         """JSON-ready forecast dictionary (see ``/reports/forecast``)."""
         base = {
             "most_likely_start": None,
+            "median_start": None,
             "interval_50": None,
             "interval_80": None,
             "probability_next_3_days": None,
@@ -674,6 +891,7 @@ class FittedModel:
         return {
             **base,
             "most_likely_start": self._date(pt),
+            "median_start": self._date(_median_index(pmf)),
             "interval_50": {"start": self._date(i50[0]), "end": self._date(i50[1])},
             "interval_80": {"start": self._date(i80[0]), "end": self._date(i80[1])},
             "probability_next_3_days": min(p3, 1.0),
@@ -711,7 +929,7 @@ class ForecastService:
     def fit(
         periods: list[PeriodTuple],
         today: datetime.date | None = None,
-        calibration: dict[tuple[str, int], float] | None = None,
+        calibration: dict[tuple[str, int, bool], float] | None = None,
     ) -> FittedModel:
         """Fit the model on plain ``(start, end_or_None)`` tuples."""
         return FittedModel(periods, today or datetime.date.today(), calibration)

@@ -115,3 +115,7 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+# Public base URL of the site, used to return an absolute calendar-feed URL (it is never
+# derived from the Host header). Leave unset to return only the /calendar/<token>.ics path.
+# publicBaseUrl: "https://cycle.example.com"

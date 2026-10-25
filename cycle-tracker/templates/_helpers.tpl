@@ -60,3 +60,10 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Name of the Secret holding SECRET_KEY / JWT_SECRET_KEY.
+*/}}
+{{- define "cycle-tracker.secretName" -}}
+{{- default (include "cycle-tracker.fullname" .) .Values.secrets.existingSecret }}
+{{- end }}

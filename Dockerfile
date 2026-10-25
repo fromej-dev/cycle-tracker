@@ -5,7 +5,7 @@ FROM node:lts-alpine as frontend_builder
 WORKDIR /app/frontend
 # Copy package.json and lock file first to leverage Docker cache
 COPY frontend/package*.json ./
-RUN npm install
+RUN npm ci
 # Copy the rest of the frontend code
 COPY frontend/ .
 RUN npm run build
@@ -29,7 +29,7 @@ COPY backend/uv.lock .
 
 # Use uv sync to install dependencies into the WORKDIR/.venv within this musl stage
 # This forces compilation against musl
-RUN uv sync
+RUN uv sync --frozen --no-dev --no-install-project
 
 # Copy backend application code source files into this stage
 # This makes them available to be copied into the final runner stage
@@ -65,6 +65,10 @@ COPY --from=backend_build /app/backend_build/app_source/migrations /app/migratio
 # Set the PATH environment variable to include the virtual environment's bin directory
 ENV PATH="/app/.venv/bin:$PATH"
 
+# Production config by default: the app refuses to start without strong
+# SECRET_KEY / JWT_SECRET_KEY. Override with FLASK_ENV=development for local hacking.
+ENV FLASK_ENV=production
+
 # Copy frontend build output from the frontend_builder stage
 # This will be served by Flask from the static directory configured in your app
 COPY --from=frontend_builder /app/frontend/dist /app/app/static
@@ -73,11 +77,13 @@ COPY --from=frontend_builder /app/frontend/dist /app/app/static
 # RUN adduser -u 1001 -D nonrootuser
 # USER nonrootuser
 
-# Make port 5000 available to the outside world
+# Persistent data (SQLite) lives under /app/instance; mount a volume here if you use SQLite.
+RUN mkdir -p /app/instance
+
+# gunicorn binds to 0.0.0.0:${PORT:-5000} (Railway and most PaaS inject PORT).
+# See docker-entrypoint.sh for WEB_CONCURRENCY, GUNICORN_THREADS, GUNICORN_TIMEOUT.
 EXPOSE 5000
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
-# Define the command that runs when the container starts
-#CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:create_app()"]
-CMD ["/app/.venv/bin/python", "-m", "gunicorn", "--bind", "0.0.0.0:5000", "app:create_app()"]
+# No CMD: the entrypoint starts gunicorn by default. Pass a command to override it.

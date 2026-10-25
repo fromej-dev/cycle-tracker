@@ -16,9 +16,11 @@ services:
     environment:
       # Pass environment variables from .env file or define them here
       - FLASK_APP=app:create_app()
-      - FLASK_ENV=${FLASK_ENV:-development} # Default to development if not set in .env
-      - SECRET_KEY=${SECRET_KEY}
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - FLASK_ENV=${FLASK_ENV:-production} # production enforces strong SECRET_KEY/JWT_SECRET_KEY
+      # Required: >= 32 random chars each. Generate with
+      #   python -c "import secrets;print(secrets.token_hex(32))"
+      - SECRET_KEY=${SECRET_KEY:?set SECRET_KEY in .env}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:?set JWT_SECRET_KEY in .env}
       # Public base URL, used to return an absolute calendar-feed URL (never taken
       # from the Host header). Leave unset to return only the /calendar/<token>.ics path.
       # - PUBLIC_BASE_URL=https://cycle.example.com

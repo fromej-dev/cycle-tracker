@@ -35,8 +35,24 @@ spec:
       containers:
         - name: {{ .Chart.Name }}
           env:
+            - name: FLASK_ENV
+              value: production
             - name: SQLITE_PATH
               value: app.db
+            {{- if or .Values.secrets.existingSecret (and .Values.secrets.secretKey .Values.secrets.jwtSecretKey) }}
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "cycle-tracker.secretName" . }}
+                  key: {{ .Values.secrets.keys.secretKey }}
+            - name: JWT_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "cycle-tracker.secretName" . }}
+                  key: {{ .Values.secrets.keys.jwtSecretKey }}
+            {{- else }}
+            {{- fail "Set secrets.existingSecret (a Secret holding SECRET_KEY and JWT_SECRET_KEY) or secrets.secretKey and secrets.jwtSecretKey. The app refuses to start without them." }}
+            {{- end }}
             {{- with .Values.publicBaseUrl }}
             - name: PUBLIC_BASE_URL
               value: {{ . | quote }}

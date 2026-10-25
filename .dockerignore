@@ -1,0 +1,21 @@
+# Keep host artefacts out of the build context (they would overwrite the
+# platform-specific node_modules / venv built inside the image, and leak secrets).
+.git
+.gitignore
+**/.env
+**/.env.*
+**/node_modules
+frontend/dist
+**/.venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.ruff_cache
+backend/instance
+instance
+*.db
+*.db-journal
+docs
+cycle-tracker
+*.md
+!backend/README.md

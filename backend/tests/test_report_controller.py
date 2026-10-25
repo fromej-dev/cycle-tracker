@@ -130,59 +130,48 @@ def test_get_reports_unauthorized(client):
     assert response_cycle.status_code == 401
 
 
+def _three_regular_periods(user_id, days_since_last=3):
+    """Three 28-day cycles whose last period started ``days_since_last`` ago."""
+    last = datetime.date.today() - datetime.timedelta(days=days_since_last)
+    for k in (2, 1, 0):
+        start = last - datetime.timedelta(days=28 * k)
+        Period(
+            user_id=user_id,
+            start_date=start,
+            end_date=start + datetime.timedelta(days=4),
+        ).save()
+    return last
+
+
 def test_get_predicted_next_period(auth_client, test_user, db):
-    """Test prediction of next period start date using average cycle length."""
-    Period(
-        user_id=test_user.id,
-        start_date=datetime.date(2023, 1, 1),
-        end_date=datetime.date(2023, 1, 5),
-    ).save()
-    Period(
-        user_id=test_user.id,
-        start_date=datetime.date(2023, 1, 29),
-        end_date=datetime.date(2023, 2, 2),
-    ).save()
-    Period(
-        user_id=test_user.id,
-        start_date=datetime.date(2023, 2, 27),
-        end_date=datetime.date(2023, 3, 3),
-    ).save()
+    """Next start is exactly one cycle after the last start (no off-by-one)."""
+    last = _three_regular_periods(test_user.id)
 
     response = auth_client.get(url_for("reports.get_predicted_next_period"))
     assert response.status_code == 200
     data = response.get_json()
 
-    # Avg cycle length = 28.0, last period = Feb 27 => next start = Feb 27 + 28 = Mar 27
-    assert data["predicted_start"] == "2023-03-27"
+    assert data["predicted_start"] == (last + datetime.timedelta(days=28)).isoformat()
 
 
 def test_get_ovulation_window(auth_client, test_user, db):
-    """Test estimation of ovulation and fertile window."""
-    Period(
-        user_id=test_user.id,
-        start_date=datetime.date(2023, 1, 1),
-        end_date=datetime.date(2023, 1, 5),
-    ).save()
-    Period(
-        user_id=test_user.id,
-        start_date=datetime.date(2023, 1, 29),
-        end_date=datetime.date(2023, 2, 2),
-    ).save()
-    Period(
-        user_id=test_user.id,
-        start_date=datetime.date(2023, 2, 27),
-        end_date=datetime.date(2023, 3, 3),
-    ).save()
+    """Ovulation is 14 days before the predicted start; fertile window -5..+1."""
+    last = _three_regular_periods(test_user.id)
+    ovulation = last + datetime.timedelta(days=14)
 
     response = auth_client.get(url_for("reports.get_ovulation_window"))
     assert response.status_code == 200
     data = response.get_json()
 
-    # Last period = Feb 27, next predicted = Mar 27
-    # Ovulation = Mar 13, fertile = Mar 9 - 14
-    assert data["ovulation_date"] == "2023-03-13"
-    assert data["fertile_window_start"] == "2023-03-09"
-    assert data["fertile_window_end"] == "2023-03-14"
+    assert data["ovulation_date"] == ovulation.isoformat()
+    assert (
+        data["fertile_window_start"]
+        == (ovulation - datetime.timedelta(days=5)).isoformat()
+    )
+    assert (
+        data["fertile_window_end"]
+        == (ovulation + datetime.timedelta(days=1)).isoformat()
+    )
 
 
 def test_get_predicted_next_period_insufficient_data(auth_client, test_user, db):
@@ -201,21 +190,7 @@ def test_get_predicted_next_period_insufficient_data(auth_client, test_user, db)
 
 def test_get_cycle_context_success(auth_client, test_user, db):
     """Test complete cycle context report when enough data is available."""
-    Period(
-        user_id=test_user.id,
-        start_date=datetime.date(2023, 1, 1),
-        end_date=datetime.date(2023, 1, 5),
-    ).save()
-    Period(
-        user_id=test_user.id,
-        start_date=datetime.date(2023, 1, 29),
-        end_date=datetime.date(2023, 2, 2),
-    ).save()
-    Period(
-        user_id=test_user.id,
-        start_date=datetime.date(2023, 2, 27),
-        end_date=datetime.date(2023, 3, 3),
-    ).save()
+    _three_regular_periods(test_user.id)
 
     response = auth_client.get(url_for("reports.get_cycle_context"))
     assert response.status_code == 200

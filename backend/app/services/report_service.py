@@ -2,6 +2,7 @@ import datetime
 from statistics import StatisticsError, mean
 
 from app.models import Period
+from app.services.forecast_service import ForecastService
 
 
 class ReportService:
@@ -97,51 +98,28 @@ class ReportService:
 
     @staticmethod
     def get_predicted_next_period(user_id: int) -> datetime.date | None:
-        """Estimates the next period start date using average cycle length."""
-        periods: list[Period] = (
-            Period.query.filter_by(user_id=user_id)
-            .order_by(Period.start_date.asc())
-            .all()
-        )
+        """Most likely next period start, from the probabilistic forecast.
 
-        if len(periods) < 2:
-            return None  # Not enough data to predict
-
-        # Use the last known start date
-        last_period_start = periods[-1].start_date
-
-        # Calculate average cycle length
-        cycle_lengths = [
-            (periods[i + 1].start_date - periods[i].start_date).days
-            for i in range(len(periods) - 1)
-            if (periods[i + 1].start_date - periods[i].start_date).days > 0
-        ]
-
-        if not cycle_lengths:
+        Returns None with fewer than two logged periods or when the user is
+        overdue (no reliable forecast), so every endpoint agrees with
+        ``/reports/forecast``.
+        """
+        count = Period.query.filter_by(user_id=user_id).count()
+        if count < 2:
             return None
-
-        avg_cycle_length = round(mean(cycle_lengths))
-        # Cycle length is start-to-start, so the next start is exactly one cycle later.
-        predicted_date = last_period_start + datetime.timedelta(days=avg_cycle_length)
-        return predicted_date
+        return ForecastService.forecast(user_id, horizon_days=1)["most_likely_start"]
 
     @staticmethod
     def get_estimated_ovulation(user_id: int) -> dict[str, datetime.date] | None:
-        """Estimates ovulation day and fertile window."""
-        predicted_start = ReportService.get_predicted_next_period(user_id)
-
-        if not predicted_start:
+        """Estimates ovulation day and fertile window (from the forecast)."""
+        count = Period.query.filter_by(user_id=user_id).count()
+        window = ForecastService.fertile_window(user_id) if count >= 2 else None
+        if not window:
             return None
-
-        # Assuming luteal phase ~14 days
-        ovulation_date = predicted_start - datetime.timedelta(days=14)
-        fertile_window_start = ovulation_date - datetime.timedelta(days=4)
-        fertile_window_end = ovulation_date + datetime.timedelta(days=1)
-
         return {
-            "ovulation_date": ovulation_date,
-            "fertile_window_start": fertile_window_start,
-            "fertile_window_end": fertile_window_end,
+            "ovulation_date": window["ovulation_date"],
+            "fertile_window_start": window["start"],
+            "fertile_window_end": window["end"],
         }
 
     @staticmethod

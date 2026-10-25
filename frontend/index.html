@@ -4,10 +4,20 @@
     <meta charset="UTF-8">
     <link rel="icon" href="/assets/icons/180_tp.png">
     <link rel="apple-touch-icon" href="/assets/icons/ios/180.png">
-    <link href="/src/assets/css/main.css" rel="stylesheet">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Period Tracker</title>
-    <meta name="theme-color" content="#fbcfe8"/> </head>
+    <meta name="theme-color" content="#FAF6F2"/>
+    <script>
+        // apply saved/system theme before first paint (no flash)
+        try {
+            var t = localStorage.getItem('cycle-tracker-theme');
+            if (t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+                document.querySelector('meta[name="theme-color"]').setAttribute('content', '#17121A');
+            }
+        } catch (e) {}
+    </script>
+</head>
 <body>
 <div id="app"></div>
 <script type="module" src="/src/main.ts"></script>

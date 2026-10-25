@@ -33,8 +33,8 @@ export default defineConfig({
                 short_name: 'Period Tracker',
                 description: 'Track your menstrual cycle',
                 start_url: "/",
-                theme_color: '#fbcfe8', // Light Pink
-                background_color: '#ff69b4',
+                theme_color: '#FAF6F2', // warm paper (light theme background)
+                background_color: '#FAF6F2',
                 display: 'standalone',
                 launch_handler: {
                     "client_mode": "auto"

@@ -94,17 +94,17 @@
     "userInfo": {
       "title": "User information",
       "loading": "Loading user data...",
-      "username": "Username:",
-      "email": "Email:",
-      "memberSince": "Member since:",
+      "username": "Username",
+      "email": "Email",
+      "memberSince": "Member since",
       "notAvailable": "N/A",
       "error": "Could not load user data. Please try again later."
     },
     "changePassword": {
       "title": "Change password",
-      "currentPasswordLabel": "Current password:",
-      "newPasswordLabel": "New password:",
-      "confirmNewPasswordLabel": "Confirm new password:",
+      "currentPasswordLabel": "Current password",
+      "newPasswordLabel": "New password",
+      "confirmNewPasswordLabel": "Confirm new password",
       "passwordMismatch": "New passwords do not match.",
       "changeButton": "Change password",
       "changing": "Changing...",
@@ -236,7 +236,11 @@
       "dueToday": "Due today",
       "overdue": "overdue"
     },
-    "periodStarted": "Period started:"
+    "periodStarted": "Period started:",
+    "eyebrowPeriod": "Current period",
+    "eyebrowNext": "Next period",
+    "eyebrowLate": "Period late",
+    "predictedHint": "Estimated from your past cycles"
   },
   "periodList": {
     "duration": "Duration:",
@@ -248,7 +252,9 @@
       "message": "Are you sure you want to delete this period? This action cannot be undone.",
       "confirm": "Yes, Delete",
       "cancel": "Cancel"
-    }
+    },
+    "showAll": "Show all {n}",
+    "showLess": "Show less"
   },
   "confirmationModal": {
     "title": "Confirm action",
@@ -258,7 +264,11 @@
   },
   "theme": {
     "switchToDark": "Switch to dark mode",
-    "switchToLight": "Switch to light mode"
+    "switchToLight": "Switch to light mode",
+    "title": "Appearance",
+    "description": "Choose a light or dark look. Your choice stays on this device.",
+    "light": "Light",
+    "dark": "Dark"
   },
   "toast": {
     "periodCreated": "Period recorded successfully",
@@ -267,5 +277,355 @@
     "passwordChanged": "Password changed successfully",
     "accountDeleted": "Account deleted successfully",
     "settingsUpdated": "Settings updated successfully"
+  },
+  "nav": {
+    "dashboard": "Today",
+    "account": "Account",
+    "calendar": "Calendar",
+    "plan": "Plan"
+  },
+  "phases": {
+    "period": "Period",
+    "fertile": "Fertile",
+    "luteal": "Other days",
+    "predicted": "Predicted",
+    "estimated": "Estimate"
+  },
+  "today": {
+    "eyebrow": "Today, {date}",
+    "dayN": "Day {n}",
+    "periodDayN": "Period day {n}",
+    "periodUsually": "Usually lasts about {n} days",
+    "likely": "Period likely {range}",
+    "likelyPct": "{pct}%",
+    "lateBy": "{count} day later than expected | {count} days later than expected",
+    "next3": "{pct}% chance it starts within 3 days",
+    "needMore": "Log a few more periods to see predictions",
+    "emptyTitle": "Start your first cycle",
+    "emptyBody": "Log a period and your cycle comes to life here.",
+    "showAll": "Show all {n}",
+    "showLess": "Show less",
+    "legendPeriod": "Period",
+    "legendFertile": "Fertile",
+    "legendPredicted": "Predicted start",
+    "ovulation": "Ovulation",
+    "today": "Today",
+    "dateLine": "Today, {date}",
+    "periodInRange": "Period in {range} days",
+    "periodInAbout": "Period in about {n} days",
+    "periodInN": "Period in {n} day | Period in {n} days",
+    "periodWithin": "Period within {n} days",
+    "periodAnyDay": "Period due any day now",
+    "daysLate": "{count} day late | {count} days late",
+    "between": "{pct}% likely between {a} and {b}",
+    "laterThanUsual": "Later than usual for you",
+    "legendForecast": "Forecast",
+    "legendOverdue": "Overdue",
+    "dayChip": "Day {n}",
+    "legendElapsed": "So far",
+    "secondary": "Or, if you missed logging a period: around {range} ({pct}%)",
+    "undo": {
+      "started": "Period started today",
+      "ended": "Period ended today",
+      "button": "Undo"
+    },
+    "lateAnyDay": "It may start any day now: {range} ({pct}%)",
+    "lateMissed": "More likely, if you missed logging a period: around {range}"
+  },
+  "forecast": {
+    "confidence": {
+      "learning": "Still learning your cycle",
+      "regular": "Your cycles are regular",
+      "variable": "Your cycles vary a little",
+      "irregular": "Your cycles are irregular",
+      "overdue": "Running later than usual"
+    },
+    "basedOn": "Based on {n} cycles"
+  },
+  "insights": {
+    "cycle": "Average cycle",
+    "cyclePlusMinus": "{avg} ± {sd} days",
+    "periodLength": "Average period",
+    "periodDays": "{n} days"
+  },
+  "calendar": {
+    "prev": "Previous month",
+    "next": "Next month",
+    "today": "Today",
+    "close": "Close",
+    "start": "Period started this day",
+    "end": "Period ended this day",
+    "noteForecast": "Period most likely starts {range} (underlined, {pct}% sure). Shaded days show where bleeding could fall.",
+    "noteLate": "Your period is later than usual, so predicted days are hidden until it starts.",
+    "noteLearning": "Log a couple more periods to see predicted days.",
+    "noteBeyond": "Predictions reach about a year ahead, so later months stay blank.",
+    "notePartial": "Further ahead, predictions get fuzzier: the shading is lighter because we are less sure.",
+    "legend": {
+      "title": "Legend",
+      "logged": "Logged period",
+      "predicted": "Possible bleeding days",
+      "fertile": "Fertile days",
+      "ovulation": "Likely ovulation",
+      "today": "Today",
+      "hint": "Dashed tiles are predictions, not records. The fainter the tile, the less likely.",
+      "start": "Most likely start day",
+      "window": "Likely start window"
+    },
+    "facts": {
+      "logged": "Logged period day {n}",
+      "ongoing": "Still going. Tap a later day to mark the end.",
+      "chance": "{pct}% chance of period",
+      "predictionNote": "A prediction, not a record",
+      "ovulation": "Likely ovulation",
+      "fertile": "Likely fertile",
+      "fertileChance": "{pct}% chance of being fertile",
+      "noPeriod": "No period expected",
+      "nothingLogged": "Nothing logged",
+      "tooFar": "Too far ahead to predict",
+      "late": "Predictions are paused while your period is late",
+      "learning": "Not enough logged periods to predict yet",
+      "likelyStart": "Most likely start day",
+      "ovulationRange": "Could fall anywhere between {a} and {b}",
+      "projected": "Projected from your average cycle"
+    },
+    "errors": {
+      "generic": "That didn't work. Check the dates and try again."
+    }
+  },
+  "history": {
+    "title": "Your cycles",
+    "seeAll": "See all",
+    "intro": "Every cycle, lined up at day 1, newest first. Tap a row for its dates.",
+    "empty": "Log a couple of periods and your cycles line up here.",
+    "average": "Average cycle",
+    "basedOn": "Based on your last {n} cycles. The shaded band is your typical range.",
+    "current": "This cycle, day {n}",
+    "typical": "Typical for you",
+    "short": "Shorter than usual",
+    "long": "Longer than usual",
+    "gap": "Maybe a missed log",
+    "now": "today",
+    "periodDays": "Period: {n} days",
+    "ongoingOrJust": "this cycle is still going",
+    "fertileEst": "Estimated fertile days: day {a} to {b} (a guess from cycle length)",
+    "gapDetail": "A gap of {n} days is about twice your usual {usual}. Probably a period that was not logged, so it is left out of your average.",
+    "legendPeriod": "Period",
+    "legendFertile": "Estimated fertile days",
+    "legendTypical": "Your typical range",
+    "from": "from {date}",
+    "today": "today"
+  },
+  "plan": {
+    "eyebrow": "Plan",
+    "title": "Will I have my period on…?",
+    "intro": "Pick a day or a trip and see how likely your period is.",
+    "pick": "Dates",
+    "from": "From",
+    "to": "To",
+    "answer": {
+      "single": "chance of your period on {date}",
+      "range": "chance of your period at some point in these {n} days"
+    },
+    "timelineLabel": "Chance of bleeding for each day in the range",
+    "legendLikely": "Solid: 50% or more",
+    "legendPossible": "Dashed: under 50%",
+    "includesPast": "This range includes days that already passed. Check them against your log.",
+    "save": "Save to my plans",
+    "errors": {
+      "pick": "Pick a start and an end date.",
+      "order": "The end date can not be before the start date.",
+      "tooLong": "Pick a range of 60 days or fewer.",
+      "tooFar": "Predictions reach about a year ahead.",
+      "name": "Give it a name so you can find it later.",
+      "generic": "That didn't work. Check the dates and try again."
+    },
+    "status": {
+      "learning": "Still learning",
+      "overdue": "Period is late",
+      "no_data": "No data yet",
+      "learningTitle": "Still learning your cycle",
+      "overdueTitle": "Your period is late, so we can't give honest odds right now",
+      "no_dataTitle": "We need your first period to answer this"
+    },
+    "reasons": {},
+    "horizon": {},
+    "confidence": {
+      "regular": "Your cycles are regular, so this is a fairly sharp estimate.",
+      "variable": "Your cycles vary a little, so treat this as a good guess.",
+      "irregular": "Your cycles are irregular, so this is a rough guess.",
+      "learning": "We are still learning your cycle, so this is a rough guess."
+    },
+    "events": {
+      "title": "Saved plans",
+      "empty": "Nothing saved yet. Save a trip or event and we keep its odds up to date.",
+      "past": "Past",
+      "edit": "Edit {name}"
+    },
+    "sheet": {
+      "saveTitle": "Save this plan",
+      "editTitle": "Edit plan",
+      "name": "Name",
+      "namePlaceholder": "Beach holiday",
+      "delete": "Delete plan",
+      "deleteSure": "Tap again to delete"
+    },
+    "toast": {
+      "saved": "Plan saved",
+      "updated": "Plan updated",
+      "deleted": "Plan deleted"
+    },
+    "timelineTitle": "Chance of bleeding each day",
+    "countsAny": "This number counts any bleeding day within your dates.",
+    "higherThan": "That's higher than {pct}% because a period that starts just before your dates can still be going on during them.",
+    "likelyStartLabel": "Likely start",
+    "peakNote": "Bleeding usually peaks a few days after it starts.",
+    "startNote": "Your period most likely starts {range} ({pct}% sure).",
+    "horizonGeneric": "The further ahead, the less certain any prediction is.",
+    "reasonGeneric": "This is an estimate from your logged cycles."
+  },
+  "feed": {
+    "title": "Add to your calendar",
+    "intro": "See your predicted period in Google, Apple or Outlook Calendar. It updates itself, and only the label you choose is shown.",
+    "label": "Calendar label",
+    "labelHelp": "Discreet on purpose: the default is just a moon. Anyone glancing at your calendar sees only this.",
+    "fertile": "Include fertile days",
+    "fertileHelp": "Off by default. Adds the estimated fertile window.",
+    "fertileLabel": "Fertile days label",
+    "fertileLabelPlaceholder": "🌿",
+    "estimate": "Mark as estimate",
+    "estimateHelp": "Adds \"(estimate)\" so a prediction is never mistaken for a fact.",
+    "timezone": "Time zone",
+    "create": "Create calendar link",
+    "rotate": "Reset link",
+    "turnOff": "Stop syncing",
+    "saved": "Calendar settings saved",
+    "off": "Calendar link turned off",
+    "copy": "Copy",
+    "copied": "Copied",
+    "rotateHelp": "A new link replaces the old one: calendars using the old link stop updating.",
+    "rotateTitle": "Reset your link?",
+    "rotateMessage": "The old link stops working right away. You will need to add the new one to each calendar app.",
+    "rotateConfirm": "Reset link",
+    "offTitle": "Turn off calendar link?",
+    "offMessage": "Your calendars stop updating. You can create a new link later.",
+    "urlTitle": "Your calendar link",
+    "urlOnce": "This is shown only once. Copy it now and keep it private: anyone with the link can see your dates.",
+    "how": {
+      "google": {
+        "title": "Google Calendar",
+        "steps": "On a computer, open Google Calendar. Next to “Other calendars” press +, choose “From URL”, paste the link and press “Add calendar”."
+      },
+      "apple": {
+        "title": "iPhone, iPad, Mac",
+        "steps": "iPhone: Settings, Calendar, Accounts, Add Account, Other, Add Subscribed Calendar, paste the link. Mac: Calendar app, File, New Calendar Subscription."
+      },
+      "outlook": {
+        "title": "Outlook",
+        "steps": "Open Outlook on the web. Choose Add calendar, then “Subscribe from web”, paste the link and give it a name."
+      },
+      "delay": "Calendar apps refresh subscribed calendars every few hours, so changes can take a while to show up."
+    },
+    "errors": {
+      "generic": "That didn't work. Please try again."
+    },
+    "private": "This link is private: anyone who has it can see these dates. Don't share it. You can reset it anytime.",
+    "preview": "Looks like:",
+    "estimateTag": "(estimate)",
+    "syncing": "Your link is active. For safety it is only shown once; reset it to get a new one."
+  },
+  "doctor": {
+    "title": "Report for your doctor",
+    "intro": "A clear, printable summary of your cycles, periods and symptoms to bring to an appointment.",
+    "range": "Period covered",
+    "months": "Last {n} months",
+    "open": "Open printable report",
+    "note": "This is an overview of what you logged, not a diagnosis. It stays on your device until you choose to print or share it.",
+    "error": "Could not create the report. Please try again."
+  },
+  "partner": {
+    "title": "Share a heads-up with a partner",
+    "intro": "Give someone a private link that tells them when a period is coming, so they can be kind and prepared.",
+    "private": "They only see whether a period is coming soon or now. Never your history, dates, symptoms or notes.",
+    "name": "Name shown to them",
+    "namePlaceholder": "Me",
+    "nameHelp": "Shown at the top of their page.",
+    "window": "Heads-up window (days)",
+    "windowHelp": "Say 'period likely soon' this many days ahead (2 to 14).",
+    "showCurrent": "Show when a period is happening",
+    "showCurrentHelp": "Off by default. When on, your partner sees \"Period now\", which over time reveals your exact period dates.",
+    "fertile": "Also show a fertile hint",
+    "fertileHelp": "Off by default. Adds a coarse fertile-window hint.",
+    "create": "Create link",
+    "urlTitle": "Your partner link",
+    "urlOnce": "Copy it now and send it to them. For safety it is only shown once.",
+    "active": "The link is active. For safety it is only shown once; reset it to get a new one.",
+    "saved": "Saved",
+    "off": "Sharing stopped",
+    "rotate": "Reset link",
+    "turnOff": "Stop sharing",
+    "rotateTitle": "Reset the partner link?",
+    "rotateMessage": "The old link stops working right away. You will get a new one to send.",
+    "rotateConfirm": "Reset link",
+    "offTitle": "Stop sharing?",
+    "offMessage": "The link stops working immediately. You can create a new one later.",
+    "errors": {
+      "generic": "Something went wrong. Please try again."
+    }
+  },
+  "auto": {
+    "title": "Smart home & automations",
+    "intro": "For advanced users: Home Assistant and webhooks.",
+    "private": "These links and secrets give access to your cycle status. Keep them private.",
+    "saved": "Saved",
+    "errors": {
+      "generic": "Something went wrong. Please try again."
+    },
+    "events": {
+      "period_started": "Period started",
+      "period_ended": "Period ended",
+      "period_expected_soon": "Period expected soon",
+      "fertile_window_starting": "Fertile window starting"
+    },
+    "ha": {
+      "title": "Home Assistant sensor",
+      "intro": "A private link a Home Assistant sensor can read.",
+      "guide": "See the Home Assistant guide in the project docs.",
+      "fertile": "Include fertile window",
+      "fertileHelp": "Off by default.",
+      "create": "Create sensor link",
+      "urlTitle": "Your sensor link",
+      "urlOnce": "Copy it now. For safety it is only shown once.",
+      "active": "Your sensor link is active. It is only shown once; reset it to get a new one.",
+      "rotate": "Reset link",
+      "turnOff": "Turn off",
+      "rotateTitle": "Reset the sensor link?",
+      "rotateMessage": "The old link stops working. Update your Home Assistant configuration with the new one.",
+      "offTitle": "Turn off the sensor link?",
+      "offMessage": "The link stops working immediately.",
+      "off": "Sensor link turned off"
+    },
+    "hooks": {
+      "title": "Webhooks",
+      "intro": "Get a signed message at your own URL when something happens. Up to 5.",
+      "url": "Webhook URL",
+      "events": "Send me",
+      "optIn": "(opt-in)",
+      "add": "Add webhook",
+      "secretTitle": "Signing secret",
+      "secretOnce": "Use it to verify messages. For safety it is only shown once.",
+      "test": "Send test",
+      "testOk": "Delivered (HTTP {status}).",
+      "testFail": "Not delivered (HTTP {status}).",
+      "pause": "Pause",
+      "resume": "Resume",
+      "paused": "Paused",
+      "rotate": "New secret",
+      "delete": "Delete",
+      "deleteTitle": "Delete this webhook?",
+      "deleteMessage": "It stops receiving messages right away.",
+      "rotateTitle": "Create a new secret?",
+      "rotateMessage": "The old secret stops being valid. Update your receiver.",
+      "privateHint": "Home-network URLs need ALLOW_PRIVATE_WEBHOOKS=1 on the server."
+    }
   }
 }

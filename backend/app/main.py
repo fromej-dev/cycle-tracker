@@ -3,7 +3,13 @@ import os
 from apiflask import APIFlask
 from flask import jsonify, send_from_directory
 
-from app.config import Config, config_by_name, get_config_name
+from app.config import (
+    Config,
+    apply_runtime_config,
+    config_by_name,
+    get_config_name,
+    redact_database_uri,
+)
 from app.controllers import register_blueprints, register_error_handlers
 from app.extensions import db, jwt, ma, migrate
 from app.models import Period, User
@@ -41,6 +47,8 @@ def create_app(config_name: str | None = None) -> APIFlask:
     # Load configuration
     config_object: type[Config] = config_by_name[config_name]
     app.config.from_object(config_object)
+    # Secrets / DATABASE_URL / public URL; raises if production secrets are weak
+    apply_runtime_config(app, config_name)
 
     # Ensure instance folder exists if not already created by config
     try:
@@ -114,6 +122,24 @@ def create_app(config_name: str | None = None) -> APIFlask:
     # Register error handlers
     register_error_handlers(app)
 
+    # Webhook CLI (`flask webhooks tick`) and optional in-process scheduler
+    @app.cli.group("webhooks")
+    def webhooks_cli():
+        """Outgoing webhook maintenance."""
+
+    @webhooks_cli.command("tick")
+    def webhooks_tick():
+        """Fire due time-driven events (expected soon / fertile window)."""
+        from app.services.webhook_service import WebhookService
+
+        print(WebhookService.tick())
+
+    seconds = app.config.get("WEBHOOK_SCHEDULER_SECONDS", 0)
+    if seconds and not app.config.get("TESTING"):
+        from app.services.webhook_service import start_scheduler
+
+        start_scheduler(app, seconds)
+
     # Shell context for Flask CLI (optional)
     @app.shell_context_processor
     def make_shell_context():
@@ -147,6 +173,8 @@ def create_app(config_name: str | None = None) -> APIFlask:
             return send_from_directory(app.static_folder, "index.html")
 
     app.logger.info(f"App created with config: {config_name}")
-    app.logger.info(f"Database URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
+    app.logger.info(
+        f"Database URI: {redact_database_uri(app.config['SQLALCHEMY_DATABASE_URI'])}"
+    )
 
     return app

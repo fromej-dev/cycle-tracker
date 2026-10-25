@@ -1,86 +1,58 @@
 <template>
-  <div class="dashboard container mx-auto space-y-8">
+  <div class="dashboard mx-auto max-w-5xl">
 
-    <div v-if="reportsStore.loading" class="text-center py-12">
-      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      <p class="mt-4 text-gray-600">{{ $t('dashboard.loader.message') }}</p>
+    <div v-if="reportsStore.loading && reportsStore.periodStats?.count === undefined" class="px-5 pt-6 flex flex-col gap-8">
+      <Skeleton variant="ring" />
+      <Skeleton variant="card" />
     </div>
 
-    <div v-else-if="reportsStore.error" class="bg-red-100 border-l-4 border-red-500 text-red-700 p-6 rounded-xl shadow-sm" role="alert">
+    <div v-else-if="reportsStore.error && reportsStore.periodStats?.count === undefined" class="bg-danger-soft border border-danger text-danger-ink p-6 m-4 rounded-3xl" role="alert">
       <p class="font-bold">{{ $t('dashboard.error.title') }}</p>
       <p>{{ reportsStore.error }} {{ $t('dashboard.error.refreshHint') }}</p>
     </div>
 
-    <div v-else class="px-4 py-8 flex flex-col gap-4">
+    <div v-else class="px-5 pt-6 pb-8 sm:px-8 flex flex-col gap-10">
 
-      <div v-if="reportsStore.periodStats?.count === 0" class="bg-gradient-to-r from-primary to-secondary text-white p-8 rounded-xl shadow-lg text-center">
-        <h2 class="text-3xl font-semibold mb-3 font-serif">{{ $t('dashboard.newUser.title') }}</h2>
-        <p class="text-lg text-indigo-50 mb-6 max-w-xl mx-auto">{{ $t('dashboard.newUser.subtitle') }}</p>
-        <svg class="h-10 w-10 mx-auto text-white opacity-80 mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-        <button @click="periodStore.startPeriodToday" class="btn btn-white">
-          {{ $t('dashboard.newUser.button') }}
-        </button>
-      </div>
+      <TodayHero />
 
-      <section v-if="reportsStore.periodStats?.count > 0" aria-labelledby="current-cycle-heading">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <StatusCard/>
-          <FertileWindowCard
-              :fertile-start="reportsStore.cycleContext?.fertile_window?.start"
-              :fertile-end="reportsStore.cycleContext?.fertile_window?.end"
-              :ovulation-date="reportsStore.cycleContext?.ovulation_date"
-              :is-today-ovulation="reportsStore.cycleContext?.is_today_ovulation"
-              :is-in-fertile-window="reportsStore.cycleContext?.is_in_fertile_window"/>
+      <section v-if="reportsStore.periodStats?.count > 0" aria-labelledby="insights-heading" class="flex flex-col gap-4">
+        <h2 id="insights-heading" class="section-title">{{ $t('dashboard.sections.insights.title') }}</h2>
+        <div v-if="cycleHeadline !== '–' || periodHeadline !== '–'" class="grid grid-cols-2 items-end gap-6 border-y border-line py-5">
+          <div v-if="cycleHeadline !== '–'">
+            <p class="eyebrow">{{ $t('insights.cycle') }}</p>
+            <p class="mt-2 font-display text-[1.625rem] leading-none whitespace-nowrap">{{ cycleHeadline }}</p>
+          </div>
+          <div v-if="periodHeadline !== '–'">
+            <p class="eyebrow">{{ $t('insights.periodLength') }}</p>
+            <p class="mt-2 font-display text-[1.625rem] leading-none whitespace-nowrap">{{ periodHeadline }}</p>
+          </div>
         </div>
-        <CycleProgressBar />
+        <FertileWindowCard v-if="!periodLate"
+            :fertile-start="reportsStore.cycleContext?.fertile_window?.start"
+            :fertile-end="reportsStore.cycleContext?.fertile_window?.end"
+            :ovulation-date="reportsStore.cycleContext?.ovulation_date"
+            :is-today-ovulation="reportsStore.cycleContext?.is_today_ovulation"
+            :is-in-fertile-window="reportsStore.cycleContext?.is_in_fertile_window"/>
       </section>
 
-      <section v-if="reportsStore.periodStats?.count > 0" aria-labelledby="insights-heading">
-        <h2 id="insights-heading" class="text-2xl font-semibold text-gray-800 mb-5 font-serif">{{ $t('dashboard.sections.insights.title') }}</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          <StatsCard
-              class="dashboard-card stats-card"
-              :title="t('dashboard.insightsCards.averagePeriodDuration')"
-              :value="reportsStore.periodStats?.average_duration"
-              decimals="1"
-              :unit="t('common.day',reportsStore.periodStats?.average_duration)"
-              :description="t('dashboard.insightsDescriptions.averagePeriodDuration')" />
-          <StatsCard
-              class="dashboard-card stats-card"
-              :title="t('dashboard.insightsCards.averageCycleLength')"
-              :value="reportsStore.cycleContext?.cycle_length"
-              :unit="t('common.day',reportsStore.cycleContext?.cycle_length)"
-              :description="t('dashboard.insightsDescriptions.averageCycleLength')" />
-          <StatsCard
-              class="dashboard-card stats-card"
-              :title="t('dashboard.insightsCards.totalPeriodsLogged')"
-              :value="reportsStore.periodStats?.count"
-              :description="t('dashboard.insightsDescriptions.totalPeriodsLogged')" />
-          <StatsCard
-              class="dashboard-card stats-card"
-              :title="t('dashboard.insightsCards.longestPeriod')"
-              :value="reportsStore.periodStats?.max_duration"
-              :unit="t('common.day',reportsStore.periodStats?.max_duration)"
-              :description="t('dashboard.insightsDescriptions.longestPeriod')" />
-          <StatsCard
-              class="dashboard-card stats-card"
-              :title="t('dashboard.insightsCards.shortestPeriod')"
-              :value="reportsStore.periodStats?.min_duration"
-              :unit="t('common.day',reportsStore.periodStats?.min_duration)"
-              :description="t('dashboard.insightsDescriptions.shortestPeriod')" />
+      <section v-if="reportsStore.periodStats?.count > 1" aria-labelledby="history-heading" class="flex flex-col gap-4">
+        <div class="flex items-baseline justify-between gap-3">
+          <h2 id="history-heading" class="section-title">{{ $t('history.title') }}</h2>
+          <router-link :to="{ name: 'history' }" class="inline-flex min-h-11 items-center text-sm font-semibold text-primary">{{ $t('history.seeAll') }}</router-link>
         </div>
+        <CycleHistory :limit="6" />
       </section>
 
-      <section id="record-period-section" class="grid grid-cols-1 lg:grid-cols-2 gap-8" aria-labelledby="log-history-heading">
+      <section id="record-period-section" class="grid grid-cols-1 lg:grid-cols-2 gap-10" aria-labelledby="log-history-heading">
         <div>
-          <h2 id="log-history-heading" class="text-2xl font-semibold text-gray-800 mb-5 font-serif">{{ $t('dashboard.sections.logHistory.recordTitle') }}</h2>
-          <div class="dashboard-card bg-white p-6">
+          <h2 id="log-history-heading" class="section-title mb-4">{{ $t('dashboard.sections.logHistory.recordTitle') }}</h2>
+          <div class="card p-6">
             <PeriodForm />
           </div>
         </div>
         <div v-if="reportsStore.periodStats?.count > 0">
-          <h2 class="text-2xl font-semibold text-gray-800 mb-5 font-serif">{{ $t('dashboard.sections.logHistory.historyTitle') }}</h2>
-          <div class="dashboard-card bg-white p-6">
+          <h2 class="section-title mb-4">{{ $t('dashboard.sections.logHistory.historyTitle') }}</h2>
+          <div class="card p-6">
             <PeriodList/>
           </div>
         </div>
@@ -92,12 +64,12 @@
 
 <script setup>
 import { useReportsStore } from '@/stores/reports';
-import StatsCard from '@/components/StatsCard.vue';
 import PeriodForm from '@/components/PeriodForm.vue';
 import PeriodList from '@/components/PeriodList.vue';
-import StatusCard from "@/components/StatusCard.vue";
-import CycleProgressBar from "@/components/CycleProgressBar.vue";
-import {onMounted} from "vue";
+import Skeleton from '@/components/Skeleton.vue';
+import CycleHistory from '@/components/CycleHistory.vue';
+import TodayHero from "@/components/TodayHero.vue";
+import {computed, onMounted} from "vue";
 import FertileWindowCard from "@/components/FertileWindowCard.vue";
 import {usePeriodsStore} from "@/stores/periods";
 import { useI18n } from 'vue-i18n';
@@ -107,10 +79,29 @@ const { t } = useI18n();
 const reportsStore = useReportsStore();
 const periodStore = usePeriodsStore();
 
+// a late cycle's old fertile window would contradict the hero, so the card hides itself
+const periodLate = computed(() => !!reportsStore.forecast?.is_late || reportsStore.forecast?.confidence === 'overdue' || (reportsStore.cycleContext?.days_until_next_period ?? 1) < 0);
+
+const cycleHeadline = computed(() => {
+  const avg = reportsStore.cycleContext?.cycle_length;
+  const sd = reportsStore.forecast?.predictive_sd_days;
+  if (!avg) return '–';
+  const base = Math.round(avg);
+  return sd != null && reportsStore.forecast?.cycles_used >= 3
+    ? t('insights.cyclePlusMinus', { avg: base, sd: Math.max(1, Math.round(sd)) })
+    : t('common.dayN', base);
+});
+const periodHeadline = computed(() => {
+  const d = reportsStore.periodStats?.average_duration;
+  return d ? t('common.dayN', Number(Number(d).toFixed(1))) : '–';
+});
+
 onMounted(async () => {
   // Fetch data - assuming fetch handles setting loading/error states
   reportsStore.fetchPeriodStats();
   reportsStore.fetchCycleContext();
+  reportsStore.fetchForecast();
+  periodStore.fetchPeriods();
 })
 </script>
 

@@ -1,31 +1,32 @@
 <template>
   <template v-if="isAuthenticated">
 
+    <!-- Desktop / tablet sidebar -->
     <div v-if="!isMobile"
          :class="[
-            'h-screen flex flex-col flex-shrink-0 bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-700 transition-width duration-300 ease-in-out',
+            'h-dvh flex flex-col flex-shrink-0 bg-surface border-r border-line transition-[width] duration-300 ease-in-out',
             sidebarOpen ? 'w-60' : 'w-20'
          ]">
-      <div class="flex-shrink-0 flex items-center h-16 border-b border-gray-100 dark:border-gray-700 px-4" :class="[sidebarOpen ? 'justify-between' : 'justify-center']">
+      <div class="flex-shrink-0 flex items-center h-16 border-b border-line px-4" :class="[sidebarOpen ? 'justify-between' : 'justify-center']">
          <span v-if="sidebarOpen">
-          <router-link :to="{ name: 'dashboard' }" class="text-l flex gap-2 items-center font-bold text-primary">
-            <img src="/assets/icons/180_tp.png" alt="Period Tracker" class="nav-image">
+          <router-link :to="{ name: 'dashboard' }" class="flex gap-2.5 items-center font-display text-lg text-primary">
+            <img src="/assets/icons/180_tp.png" alt="" class="nav-image">
             {{ $t('common.title')}}
           </router-link>
          </span>
         <div class="flex items-center gap-1">
           <ThemeToggle />
-          <button @click="toggleSidebar" class="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary">
-            <ChevronDoubleLeftIcon v-if="sidebarOpen" class="h-5 w-5 text-gray-600 dark:text-gray-300" />
-            <ChevronDoubleRightIcon v-else class="h-5 w-5 text-gray-600 dark:text-gray-300" />
+          <button @click="toggleSidebar" class="p-2 rounded-xl text-ink-soft hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+            <ChevronDoubleLeftIcon v-if="sidebarOpen" class="h-5 w-5" />
+            <ChevronDoubleRightIcon v-else class="h-5 w-5" />
           </button>
         </div>
       </div>
 
-      <nav class="flex-1 flex flex-col mt-4 px-2 space-y-2 overflow-y-auto pb-4">
+      <nav class="flex-1 flex flex-col mt-4 px-3 space-y-1 overflow-y-auto pb-4">
         <RouterLink
             v-for="item in navigationItems"
-            :key="item.name"
+            :key="item.key"
             :to="item.to"
             custom
             v-slot="{ href, navigate, isActive }"
@@ -34,23 +35,24 @@
               :href="href"
               @click="navigate"
               :class="[
-                    'flex items-center px-4 py-2.5 rounded-lg transition-colors duration-150 group',
-                    isActive ? 'bg-primary-50 dark:bg-gray-700 text-primary dark:text-primary font-medium' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100',
+                    'flex items-center px-4 py-2.5 rounded-xl transition-colors duration-150',
+                    isActive ? 'bg-primary-soft text-primary font-semibold' : 'text-ink-soft hover:bg-surface-muted hover:text-ink',
                     sidebarOpen ? 'justify-start' : 'justify-center'
                 ]"
-              :title="sidebarOpen ? '' : item.name"
+              :title="sidebarOpen ? '' : $t(item.label)"
           >
-            <component :is="item.icon" :class="['h-5 w-5 flex-shrink-0', isActive ? 'text-primary' : 'text-gray-400 group-hover:text-gray-500']" aria-hidden="true" />
-            <span v-if="sidebarOpen" class="ml-3 text-sm">{{ item.name }}</span>
+            <component :is="isActive ? item.iconActive : item.icon" class="h-5 w-5 flex-shrink-0" aria-hidden="true" />
+            <span v-if="sidebarOpen" class="ml-3 text-sm">{{ $t(item.label) }}</span>
           </a>
         </RouterLink>
       </nav>
     </div>
 
-    <nav v-else class="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 flex justify-around py-2 shadow-[0_-2px_10px_-3px_rgba(0,0,0,0.05)] dark:shadow-[0_-2px_10px_-3px_rgba(0,0,0,0.3)] z-50">
+    <!-- Mobile tab bar -->
+    <nav v-else class="tabbar fixed bottom-0 left-0 right-0 z-50 border-t border-line flex justify-around px-4 pt-2">
       <RouterLink
           v-for="item in navigationItems"
-          :key="item.name"
+          :key="item.key"
           :to="item.to"
           custom
           v-slot="{ href, navigate, isActive }"
@@ -58,13 +60,16 @@
         <a
             :href="href"
             @click="navigate"
+            :aria-current="isActive ? 'page' : undefined"
             :class="[
-                'flex flex-col items-center text-xs px-2 py-1 rounded-md w-16',
-                isActive ? 'text-primary font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                'flex flex-col items-center gap-0.5 text-xs flex-1 max-w-32 py-1 rounded-xl',
+                isActive ? 'text-primary font-semibold' : 'text-ink-soft'
             ]"
         >
-          <component :is="item.icon" :class="['h-5 w-5 mb-0.5']" aria-hidden="true" />
-          <span>{{ item.name }}</span>
+          <span :class="['flex items-center justify-center h-8 w-14 rounded-full transition-colors', isActive ? 'bg-primary-soft' : '']">
+            <component :is="isActive ? item.iconActive : item.icon" class="h-6 w-6" aria-hidden="true" />
+          </span>
+          <span>{{ $t(item.label) }}</span>
         </a>
       </RouterLink>
     </nav>
@@ -77,31 +82,32 @@ import { ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import {
   HomeIcon,
+  CalendarDaysIcon,
+  CalendarDateRangeIcon,
   UserCircleIcon,
   ChevronDoubleLeftIcon,
   ChevronDoubleRightIcon,
 } from '@heroicons/vue/24/outline';
+import { CalendarDateRangeIcon as PlanSolid, CalendarDaysIcon as CalendarSolid, HomeIcon as HomeSolid, UserCircleIcon as UserCircleSolid } from '@heroicons/vue/24/solid';
 import ThemeToggle from '@/components/ThemeToggle.vue';
 
 interface Props {
   isMobile: boolean;
   isAuthenticated: boolean;
 }
-// Default values can be useful, although App.vue will always pass them
 const props = withDefaults(defineProps<Props>(), {
   isMobile: false,
   isAuthenticated: false,
 });
 
-const sidebarOpen = ref<boolean>(true); // Default state for desktop sidebar
+const sidebarOpen = ref<boolean>(true);
 
-// Navigation items - adjusted home link potentially if needed based on auth logic elsewhere
-const navigationItems = ref([
-  // Consider if 'Home' is needed for authenticated users, maybe Dashboard is the default?
-  // { name: 'Home', to: '/', icon: HomeIcon },
-  { name: 'Dashboard', to: '/dashboard', icon: HomeIcon },
-  { name: 'Account', to: '/account', icon: UserCircleIcon },
-]);
+const navigationItems = [
+  { key: 'dashboard', label: 'nav.dashboard', to: '/dashboard', icon: HomeIcon, iconActive: HomeSolid },
+  { key: 'calendar', label: 'nav.calendar', to: '/calendar', icon: CalendarDaysIcon, iconActive: CalendarSolid },
+  { key: 'plan', label: 'nav.plan', to: '/plan', icon: CalendarDateRangeIcon, iconActive: PlanSolid },
+  { key: 'account', label: 'nav.account', to: '/account', icon: UserCircleIcon, iconActive: UserCircleSolid },
+];
 
 function toggleSidebar() {
   sidebarOpen.value = !sidebarOpen.value;
@@ -109,36 +115,15 @@ function toggleSidebar() {
 </script>
 
 <style scoped>
-/* Styles remain largely the same, ensuring they target the correct elements */
-.transition-width {
-  transition-property: width;
-}
-
-.bg-primary-50 {
-  background-color: #FFF1F2; /* Example Pink-50 */
-}
-
-.focus\:ring-primary:focus {
-  --tw-ring-color: #E11D48; /* Example primary color */
+.tabbar {
+  background: var(--color-surface);
+  box-shadow: var(--shadow-nav);
+  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
 }
 
 .nav-image {
-  height: 27px;
-  width: 27px;
-  background: #fff; /* Assuming white background */
+  height: 28px;
+  width: 28px;
   border-radius: 25%;
-  padding: 3px;
-}
-
-/* Optional: Style scrollbar within the sidebar nav */
-nav::-webkit-scrollbar {
-  width: 6px;
-}
-nav::-webkit-scrollbar-thumb {
-  background-color: rgba(0,0,0,0.2);
-  border-radius: 3px;
-}
-nav::-webkit-scrollbar-track {
-  background: rgba(0,0,0,0.05);
 }
 </style>

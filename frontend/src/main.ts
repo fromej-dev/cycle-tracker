@@ -8,9 +8,12 @@ import i18n from '@/i18n'
 import Toast from 'vue-toastification'
 import 'vue-toastification/dist/index.css'
 import './assets/css/toast.css' // Custom toast styles
+import { initTheme } from '@/composables/useDarkMode'
 
 // Initialize Axios with configuration
 import '@/api/index.ts' // This runs the code in api/index.js
+
+initTheme() // theme must be live on every device, not only where ThemeToggle is rendered
 
 const app = createApp(App)
 
@@ -31,13 +34,12 @@ const toastOptions = {
 }
 
 app.use(createPinia())
+// restore auth BEFORE the router's first navigation, otherwise a reload on /account bounces to /dashboard
+import { useAuthStore } from './stores/auth'
+useAuthStore().initializeAuth()
 app.use(router)
 app.use(i18n)
 app.use(Toast, toastOptions)
 
-// Initialize auth state from local storage
-import { useAuthStore } from './stores/auth'
-const authStore = useAuthStore()
-authStore.initializeAuth() // Call this action
 
 app.mount('#app')

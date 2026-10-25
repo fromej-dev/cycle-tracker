@@ -31,11 +31,12 @@ class PeriodCreateSchema(Schema):
 
 
 class PeriodUpdateSchema(Schema):
-    """Schema specifically for updating a period (only end_date)."""
+    """Schema specifically for updating a period (only end_date).
 
-    end_date = fields.Date(
-        required=True, allow_none=False
-    )  # Must provide end date to update
+    A null end_date reopens the period (used to undo "period ended").
+    """
+
+    end_date = fields.Date(required=True, allow_none=True)
 
     @validates_schema
     def validate_end_date(self, data, **kwargs):

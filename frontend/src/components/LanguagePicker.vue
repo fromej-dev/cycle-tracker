@@ -2,7 +2,7 @@
   <div class="relative" ref="dropdownContainer">
     <button
         @click="toggleDropdown"
-        class="flex items-center p-2 rounded-md text-white hover:bg-gray-100 hover:text-primary focus:outline-none focus:ring-2 focus:ring-offset focus:ring-primary-focus transition duration-150 ease-in-out"
+        class="flex items-center p-2 rounded-xl text-current hover:bg-black/10 focus:outline-none focus:ring-2 focus:ring-white transition duration-150 ease-in-out"
         aria-haspopup="true"
         :aria-expanded="isOpen"
     >
@@ -25,7 +25,7 @@
     >
       <div
           v-if="isOpen"
-          class="absolute right-0 mt-2 w-40 origin-top-right bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
+          class="absolute right-0 mt-2 w-40 origin-top-right bg-surface text-ink rounded-2xl shadow-lg ring-1 ring-line focus:outline-none z-50"
           role="menu"
           aria-orientation="vertical"
           aria-labelledby="menu-button"
@@ -38,7 +38,7 @@
               @click="changeLanguage(lang)"
               :class="[
               'block w-full text-left px-4 py-2 text-sm',
-              lang === currentLocale ? 'bg-primary-50 text-primary font-semibold' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+              lang === currentLocale ? 'bg-primary-soft text-primary font-semibold' : 'text-ink-soft hover:bg-surface-muted hover:text-ink'
             ]"
               role="menuitem"
               tabindex="-1"
@@ -113,9 +113,4 @@ button svg {
   stroke: currentColor;
 }
 
-/* Define primary colors if not already globally configured in tailwind.config.js */
-/* You might need to adjust these based on your actual primary color */
-.bg-primary-50 {
-  background-color: #fdf2f8; /* Example: pink-50 */
-}
 </style>

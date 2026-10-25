@@ -2,6 +2,7 @@ import datetime
 from statistics import StatisticsError, mean
 
 from app.models import Period
+from app.services.forecast_service import ForecastService
 
 
 class ReportService:
@@ -96,57 +97,43 @@ class ReportService:
         }
 
     @staticmethod
-    def get_predicted_next_period(user_id: int) -> datetime.date | None:
-        """Estimates the next period start date using average cycle length."""
-        periods: list[Period] = (
-            Period.query.filter_by(user_id=user_id)
-            .order_by(Period.start_date.asc())
-            .all()
-        )
-
-        if len(periods) < 2:
-            return None  # Not enough data to predict
-
-        # Use the last known start date
-        last_period_start = periods[-1].start_date
-
-        # Calculate average cycle length
-        cycle_lengths = [
-            (periods[i + 1].start_date - periods[i].start_date).days
-            for i in range(len(periods) - 1)
-            if (periods[i + 1].start_date - periods[i].start_date).days > 0
-        ]
-
-        if not cycle_lengths:
-            return None
-
-        avg_cycle_length = round(mean(cycle_lengths))
-        predicted_date = last_period_start + datetime.timedelta(
-            days=avg_cycle_length - 1
-        )
-        return predicted_date
+    def _forecast(user_id: int, today: datetime.date | None = None) -> dict:
+        return ForecastService.forecast(user_id, today, horizon_days=1)
 
     @staticmethod
-    def get_estimated_ovulation(user_id: int) -> dict[str, datetime.date] | None:
-        """Estimates ovulation day and fertile window."""
-        predicted_start = ReportService.get_predicted_next_period(user_id)
+    def get_predicted_next_period(
+        user_id: int, today: datetime.date | None = None
+    ) -> datetime.date | None:
+        """Most likely next period start, from the probabilistic forecast.
 
-        if not predicted_start:
+        Same value as ``/reports/forecast`` (including the prior-only "learning"
+        forecast after a single logged period). None only without any period or
+        when the user is overdue (no reliable forecast).
+        """
+        return ReportService._forecast(user_id, today)["most_likely_start"]
+
+    @staticmethod
+    def _ovulation_from(forecast: dict) -> dict[str, datetime.date] | None:
+        window = forecast["fertile_window"]
+        if not window:
             return None
-
-        # Assuming luteal phase ~14 days
-        ovulation_date = predicted_start - datetime.timedelta(days=14)
-        fertile_window_start = ovulation_date - datetime.timedelta(days=4)
-        fertile_window_end = ovulation_date + datetime.timedelta(days=1)
-
         return {
-            "ovulation_date": ovulation_date,
-            "fertile_window_start": fertile_window_start,
-            "fertile_window_end": fertile_window_end,
+            "ovulation_date": window["ovulation_date"],
+            "fertile_window_start": window["start"],
+            "fertile_window_end": window["end"],
         }
 
     @staticmethod
-    def get_cycle_context(user_id: int) -> dict[str, any] | None:
+    def get_estimated_ovulation(
+        user_id: int, today: datetime.date | None = None
+    ) -> dict[str, datetime.date] | None:
+        """Estimates ovulation day and fertile window (from the forecast)."""
+        return ReportService._ovulation_from(ReportService._forecast(user_id, today))
+
+    @staticmethod
+    def get_cycle_context(
+        user_id: int, today: datetime.date | None = None
+    ) -> dict[str, any] | None:
         """
         Returns contextual information about the user's current menstrual cycle.
 
@@ -168,7 +155,7 @@ class ReportService:
 
             - cycle_day (int or None): If not currently on a period, the number of days since the last period started.
 
-            - cycle_length (float or None): The average cycle length for the user (in days), based on past data.
+            - cycle_length (float or None): The user's typical cycle length (days) from the forecast model, which ignores forgotten-log gaps.
 
             - progress_percent (float or None): If not currently on a period and average cycle length is known,
               an estimate of how far the user is through their current cycle (as a percentage).
@@ -190,61 +177,49 @@ class ReportService:
 
         Returns None if there is no period history for the user.
         """
-        from datetime import date
-
-        today = date.today()
-        periods = (
-            Period.query.filter_by(user_id=user_id)
-            .order_by(Period.start_date.asc())
-            .all()
-        )
-
+        today = today or datetime.date.today()
+        periods = ForecastService._load(user_id)
         if not periods:
             return None
 
-        cycle_stats = ReportService.get_cycle_stats(user_id)
-        predicted_start = ReportService.get_predicted_next_period(user_id)
-        ovulation = ReportService.get_estimated_ovulation(user_id)
+        # One fit serves every field, so this endpoint always agrees with
+        # /reports/forecast (including "ongoing", which expires for stale open periods).
+        model = ForecastService.fit(periods, today)
+        today = model.today  # may be shifted by a day if the client clock is ahead
+        forecast = model.forecast(horizon_days=1)
+        predicted_start = forecast["most_likely_start"]
+        ovulation = ReportService._ovulation_from(forecast)
 
-        # Check if there's a running period
-        current_period = (
+        last_period = (
             Period.query.filter_by(user_id=user_id)
-            .filter(Period.end_date.is_(None))
             .order_by(Period.start_date.desc())
             .first()
         )
+        last_start = model.last_start
 
         days_running = None
         status = "waiting"
         current_period_id = None
         days_until_next_period = None
-        if current_period:
-            # Period in progress
-            days_running = (today - current_period.start_date).days + 1
+        if model.ongoing:
+            days_running = model.age + 1
             status = "period"
-            current_period_id = current_period.id
-        else:
-            if predicted_start:
-                delta = predicted_start - today
-                # If predicted date is today or in the past, days until is 0
-                if delta.days <= 0:
-                    days_until_next_period = 0
-                else:
-                    days_until_next_period = delta.days
+            current_period_id = last_period.id if last_period else None
+        elif predicted_start:
+            days_until_next_period = max((predicted_start - today).days, 0)
 
-        progress_percent = None
-        last_start = periods[-1].start_date
         cycle_day = (today - last_start).days + 1 if today > last_start else 1
-        if cycle_stats and cycle_stats.get("average_length"):
-            avg = cycle_stats["average_length"]
-            progress_percent = min(round((cycle_day / avg) * 100), 100.0)
+        cycle_length = model.mean_cycle if model.cycles_used else None
+        progress_percent = None
+        if cycle_length:
+            progress_percent = float(min(round(cycle_day / cycle_length * 100), 100))
 
         return {
             "status": status,
             "current_period_id": current_period_id,
             "days_running": days_running,
             "cycle_day": cycle_day,
-            "cycle_length": cycle_stats.get("average_length") if cycle_stats else None,
+            "cycle_length": round(cycle_length, 1) if cycle_length else None,
             "progress_percent": progress_percent,
             "predicted_start": predicted_start,
             "days_until_next_period": days_until_next_period,
@@ -253,12 +228,15 @@ class ReportService:
                 "start": ovulation.get("fertile_window_start") if ovulation else None,
                 "end": ovulation.get("fertile_window_end") if ovulation else None,
             },
-            "is_today_ovulation": ovulation
-            and ovulation.get("ovulation_date") == today,
-            "is_in_fertile_window": (
-                ovulation
-                and ovulation.get("fertile_window_start")
-                <= today
-                <= ovulation.get("fertile_window_end")
+            "is_today_ovulation": bool(
+                ovulation and ovulation["ovulation_date"] == today
             ),
+            "is_in_fertile_window": bool(
+                ovulation
+                and ovulation["fertile_window_start"]
+                <= today
+                <= ovulation["fertile_window_end"]
+            ),
+            "is_late": forecast["is_late"],
+            "confidence": forecast["confidence"],
         }

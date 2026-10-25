@@ -75,6 +75,48 @@ def test_update_period_end_success(auth_client, db, test_user):
     assert updated_period.end_date == datetime.date.fromisoformat(end_date_str)
 
 
+def test_reopen_latest_period(auth_client, db, test_user):
+    """A null end_date reopens the most recent period (undo of "period ended")."""
+    period = Period(
+        user_id=test_user.id,
+        start_date=datetime.date(2023, 4, 1),
+        end_date=datetime.date(2023, 4, 5),
+    )
+    db.session.add(period)
+    db.session.commit()
+
+    response = auth_client.put(
+        url_for("periods.update_period", period_id=period.id),
+        json={"end_date": None},
+    )
+    assert response.status_code == 200
+    assert response.get_json()["end_date"] is None
+    assert Period.get_by_id(period.id).end_date is None
+
+
+def test_reopen_older_period_is_rejected(auth_client, db, test_user):
+    """Only the most recent period can be reopened."""
+    older = Period(
+        user_id=test_user.id,
+        start_date=datetime.date(2023, 3, 1),
+        end_date=datetime.date(2023, 3, 5),
+    )
+    newer = Period(
+        user_id=test_user.id,
+        start_date=datetime.date(2023, 3, 29),
+        end_date=datetime.date(2023, 4, 2),
+    )
+    db.session.add_all([older, newer])
+    db.session.commit()
+
+    response = auth_client.put(
+        url_for("periods.update_period", period_id=older.id),
+        json={"end_date": None},
+    )
+    assert response.status_code == 400
+    assert Period.get_by_id(older.id).end_date == datetime.date(2023, 3, 5)
+
+
 def test_update_period_end_date_before_start(auth_client, test_period):
     """Test updating end date to be before start date."""
     end_date_str = (test_period.start_date - datetime.timedelta(days=1)).isoformat()

@@ -75,6 +75,19 @@ export const usePeriodsStore = defineStore<'periods', PeriodsState, {}, PeriodsA
             }
         },
 
+        /** undo of "period ended": clear the end date again */
+        async reopenPeriod(periodId: number) {
+            try {
+                const response = await PeriodApi.updatePeriod(periodId, { end_date: null } as any);
+                const index = this.periods.findIndex(p => p.id === periodId);
+                if (index !== -1) this.periods[index] = response.data;
+            } catch (error: any) {
+                this.error = error.response?.data?.message || 'Failed to undo';
+            } finally {
+                await this.refreshStats()
+            }
+        },
+
         async deletePeriod(periodId: number) {
             this.loading = true;
             this.error = null;
@@ -93,7 +106,7 @@ export const usePeriodsStore = defineStore<'periods', PeriodsState, {}, PeriodsA
         async refreshStats() {
             const reportStore = useReportsStore()
             await reportStore.fetchPeriodStats()
-            await reportStore.fetchCycleContext()
+            await Promise.all([reportStore.fetchCycleContext(), reportStore.fetchForecast()])
         }
     }
 });

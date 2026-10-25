@@ -130,92 +130,74 @@ def test_get_reports_unauthorized(client):
     assert response_cycle.status_code == 401
 
 
+def _three_regular_periods(user_id, days_since_last=3):
+    """Three 28-day cycles whose last period started ``days_since_last`` ago."""
+    last = datetime.date.today() - datetime.timedelta(days=days_since_last)
+    for k in (2, 1, 0):
+        start = last - datetime.timedelta(days=28 * k)
+        Period(
+            user_id=user_id,
+            start_date=start,
+            end_date=start + datetime.timedelta(days=4),
+        ).save()
+    return last
+
+
 def test_get_predicted_next_period(auth_client, test_user, db):
-    """Test prediction of next period start date using average cycle length."""
-    Period(
-        user_id=test_user.id,
-        start_date=datetime.date(2023, 1, 1),
-        end_date=datetime.date(2023, 1, 5),
-    ).save()
-    Period(
-        user_id=test_user.id,
-        start_date=datetime.date(2023, 1, 29),
-        end_date=datetime.date(2023, 2, 2),
-    ).save()
-    Period(
-        user_id=test_user.id,
-        start_date=datetime.date(2023, 2, 27),
-        end_date=datetime.date(2023, 3, 3),
-    ).save()
+    """Next start is exactly one cycle after the last start (no off-by-one)."""
+    last = _three_regular_periods(test_user.id)
 
     response = auth_client.get(url_for("reports.get_predicted_next_period"))
     assert response.status_code == 200
     data = response.get_json()
 
-    # Avg cycle length = 28.0, last period = Feb 27 => predicted = Mar 26
-    assert data["predicted_start"] == "2023-03-26"
+    assert data["predicted_start"] == (last + datetime.timedelta(days=28)).isoformat()
 
 
 def test_get_ovulation_window(auth_client, test_user, db):
-    """Test estimation of ovulation and fertile window."""
-    Period(
-        user_id=test_user.id,
-        start_date=datetime.date(2023, 1, 1),
-        end_date=datetime.date(2023, 1, 5),
-    ).save()
-    Period(
-        user_id=test_user.id,
-        start_date=datetime.date(2023, 1, 29),
-        end_date=datetime.date(2023, 2, 2),
-    ).save()
-    Period(
-        user_id=test_user.id,
-        start_date=datetime.date(2023, 2, 27),
-        end_date=datetime.date(2023, 3, 3),
-    ).save()
+    """Ovulation is 14 days before the predicted start; fertile window -5..+1."""
+    last = _three_regular_periods(test_user.id)
+    ovulation = last + datetime.timedelta(days=14)
 
     response = auth_client.get(url_for("reports.get_ovulation_window"))
     assert response.status_code == 200
     data = response.get_json()
 
-    # Last period = Feb 27, next predicted = Mar 26
-    # Ovulation = Mar 12, fertile = Mar 8 - 13
-    assert data["ovulation_date"] == "2023-03-12"
-    assert data["fertile_window_start"] == "2023-03-08"
-    assert data["fertile_window_end"] == "2023-03-13"
+    assert data["ovulation_date"] == ovulation.isoformat()
+    assert (
+        data["fertile_window_start"]
+        == (ovulation - datetime.timedelta(days=5)).isoformat()
+    )
+    assert (
+        data["fertile_window_end"]
+        == (ovulation + datetime.timedelta(days=1)).isoformat()
+    )
 
 
-def test_get_predicted_next_period_insufficient_data(auth_client, test_user, db):
-    """Test prediction fails gracefully with not enough data."""
+def test_get_predicted_next_period_single_period_is_learning_forecast(
+    auth_client, test_user, db
+):
+    """One period gives the prior-only forecast, the same as /reports/forecast."""
+    start = datetime.date.today() - datetime.timedelta(days=5)
     Period(
-        user_id=test_user.id,
-        start_date=datetime.date(2023, 4, 1),
-        end_date=datetime.date(2023, 4, 5),
+        user_id=test_user.id, start_date=start, end_date=start + datetime.timedelta(4)
     ).save()
 
-    response = auth_client.get(url_for("reports.get_predicted_next_period"))
-    assert response.status_code == 200
-    data = response.get_json()
+    data = auth_client.get(url_for("reports.get_predicted_next_period")).get_json()
+    forecast = auth_client.get(url_for("reports.get_forecast")).get_json()
+    assert data["predicted_start"] == forecast["most_likely_start"]
+    assert forecast["confidence"] == "learning"
+    assert data["predicted_start"] is not None
+
+
+def test_get_predicted_next_period_no_periods(auth_client):
+    data = auth_client.get(url_for("reports.get_predicted_next_period")).get_json()
     assert data["predicted_start"] is None
 
 
 def test_get_cycle_context_success(auth_client, test_user, db):
     """Test complete cycle context report when enough data is available."""
-    Period(
-        user_id=test_user.id,
-        start_date=datetime.date(2023, 1, 1),
-        end_date=datetime.date(2023, 1, 5),
-    ).save()
-    Period(
-        user_id=test_user.id,
-        start_date=datetime.date(2023, 1, 29),
-        end_date=datetime.date(2023, 2, 2),
-    ).save()
-    Period(
-        user_id=test_user.id,
-        start_date=datetime.date(2023, 2, 27),
-        end_date=datetime.date(2023, 3, 3),
-    ).save()
+    _three_regular_periods(test_user.id)
 
     response = auth_client.get(url_for("reports.get_cycle_context"))
     assert response.status_code == 200
@@ -233,25 +215,23 @@ def test_get_cycle_context_success(auth_client, test_user, db):
     assert isinstance(data["is_in_fertile_window"], bool)
 
 
-def test_get_cycle_context_insufficient_data(auth_client, test_user, db):
-    """Should handle gracefully when there's not enough data."""
-    # Only one completed period
+def test_get_cycle_context_single_period_shows_learning_prediction(
+    auth_client, test_user, db
+):
+    """Same learning forecast everywhere after one logged period."""
+    start = datetime.date.today() - datetime.timedelta(days=5)
     Period(
-        user_id=test_user.id,
-        start_date=datetime.date(2023, 3, 1),
-        end_date=datetime.date(2023, 3, 4),
+        user_id=test_user.id, start_date=start, end_date=start + datetime.timedelta(4)
     ).save()
 
-    response = auth_client.get(url_for("reports.get_cycle_context"))
-    assert response.status_code == 200
-    data = response.get_json()
+    data = auth_client.get(url_for("reports.get_cycle_context")).get_json()
+    forecast = auth_client.get(url_for("reports.get_forecast")).get_json()
 
-    # The endpoint will return None or partial data
     assert "status" in data
-    assert data["predicted_start"] is None
-    assert data["ovulation_date"] is None
-    assert data["fertile_window"]["start"] is None
-    assert data["fertile_window"]["end"] is None
+    assert data["predicted_start"] == forecast["most_likely_start"]
+    assert data["ovulation_date"] == forecast["fertile_window"]["ovulation_date"]
+    assert data["confidence"] == "learning"
+    assert data["cycle_length"] is None  # no completed cycle observed yet
 
 
 def test_get_cycle_context_no_periods(auth_client):

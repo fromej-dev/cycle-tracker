@@ -1,86 +1,267 @@
 @import "tailwindcss";
+@import "@fontsource-variable/fraunces/full.css";
+@import "@fontsource-variable/figtree/index.css";
 
 @variant dark (&:where(.dark, .dark *));
 
-@theme {
-    --color-primary: #ff69b4;
-    --color-secondary: #f8bbd0;
-    --color-background: #ffffff;
-    --color-surface: #f5f5f5;
-    --color-text-primary: #333333;
-    --color-text-secondary: #666666;
-    --color-border: #e2e8f0;
-    --color-input: #ffffff;
-    --color-input-focus: #fff5f8;
+/*
+ * DESIGN TOKENS
+ * ---------------------------------------------------------------------------
+ * Warm, plum-biased neutrals + one deep berry brand colour + three semantic
+ * phase colours that mean the same thing everywhere (ring, calendar, history,
+ * cards, badges):
+ *   period  = rose red     (bleeding)
+ *   fertile = deep sage    (fertile window / ovulation)
+ *   luteal  = dusk violet  (everything else: luteal / PMS / other)
+ * "Predicted / uncertain" is NOT a fourth colour: it is the same phase colour
+ * rendered as a soft tint + diagonal hatch + dashed edge (see .is-predicted),
+ * because this app's forecasts are probabilities, not facts.
+ *
+ * Verified WCAG 2.x contrast ratios (computed, not eyeballed):
+ * LIGHT
+ *   ink #2B2029 on background #FAF6F2 14.56 | on surface #FFF 15.66 | on surface-muted #F2EBE5 13.26
+ *   ink-soft #665860 on background 6.24 | on surface 6.71 | on surface-muted 5.68
+ *   on-primary #FFF on primary #A62A57 6.80 ; primary on background 6.32, on surface 6.80
+ *   phase solid on surface (graphics / large text, >=3 needed): period #C0305B 5.50,
+ *     fertile #2E6F5E 5.91, luteal #6A5C9E 5.77 ; white text on each solid phase: 5.50 / 5.91 / 5.77
+ *   phase-ink on phase-soft: period #8E1F46/#F8DEE5 6.97 (approx), fertile #1F5244/#D9ECE4 7.27,
+ *     luteal #4F4380/#E6E1F2 6.71
+ * DARK
+ *   ink #F4ECEF on background #17121A 15.90 | on surface #221A25 14.56 | on surface-muted #2D2431 12.85
+ *   ink-soft #B5A6B0 on background 7.95 | on surface 7.28 | on surface-muted 6.42
+ *   on-primary #2A0F1B on primary #F28BA8 7.64 ; primary on background 7.94, on surface 7.27
+ *   phase solid on surface: period #F28BA8 7.27, fertile #7FD6B9 9.84, luteal #B3A6EA 7.69;
+ *     on-phase #17121A text on each solid: 7.94 / 9.48+ / 8.40
+ *   phase-ink on phase-soft: period #FFB6C8/#4A2230 8.18, fertile #A8E8D3/#1F3A33 ~8.7,
+ *     luteal #D2C9F6/#33294F 8.55
+ * Danger/success pairs below were verified at >= 4.5 as well (see ratios inline).
+ */
+@theme static {
+    /* fonts: Fraunces = characterful soft-serif voice for numbers/headings, Figtree = clean body */
+    --font-sans: "Figtree Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-display: "Fraunces Variable", ui-serif, Georgia, "Times New Roman", serif;
+    --font-serif: var(--font-display);
+
+    /* type scale (display / title / heading are new; text-xs..text-lg stay Tailwind's) */
+    --text-display: 3.5rem;
+    --text-display--line-height: 1;
+    --text-display--letter-spacing: -0.03em;
+    --text-title: 1.875rem;
+    --text-title--line-height: 1.15;
+    --text-title--letter-spacing: -0.02em;
+    --text-heading: 1.25rem;
+    --text-heading--line-height: 1.3;
+    --text-heading--letter-spacing: -0.01em;
+
+    /* surfaces */
+    --color-background: #FAF6F2;
+    --color-surface: #FFFFFF;
+    --color-surface-muted: #F2EBE5;
+    --color-line: #E6DCD4;
+    --color-line-strong: #CDBDB4;
+    --color-ink: #2B2029;
+    --color-ink-soft: #665860;
+
+    /* brand */
+    --color-primary: #A62A57;
+    --color-primary-hover: #8C2148;
+    --color-on-primary: #FFFFFF;
+    --color-primary-soft: #F8E2EA;
+    --color-secondary: var(--color-line-strong);
+
+    /* phases */
+    --color-period: #C0305B;
+    --color-period-soft: #F8DEE5;
+    --color-period-ink: #8E1F46;
+    --color-fertile: #2E6F5E;
+    --color-fertile-soft: #D9ECE4;
+    --color-fertile-ink: #1F5244;
+    --color-luteal: #6A5C9E;
+    --color-luteal-soft: #E6E1F2;
+    --color-luteal-ink: #4F4380;
+    --color-on-phase: #FFFFFF;
+
+    /* status */
+    --color-danger: #B42318;       /* 6.5 on surface */
+    --color-danger-soft: #FBE4E1;
+    --color-danger-ink: #8A1A10;   /* 7.3 on danger-soft */
+    --color-success-soft: #DDEFE4;
+    --color-success-ink: #1D5236;  /* 7.4 on success-soft */
+
+    /* inputs */
+    --color-input: #FFFFFF;
+    --color-input-focus: #FFFFFF;
+
+    --ring-tint: 20%;
+    --tile-t0: 7%;
+    --tile-t1: 32%;
+    --edge-t0: 30%;
+    /* fertile tiles: light mixes into the surface; dark mixes into the deep sage so it stays green, not grey-mud */
+    --fertile-base: var(--color-surface);
+    --ftile-t0: var(--tile-t0);
+    --ftile-t1: var(--tile-t1);
+    --shadow-card: 0 1px 2px rgb(60 30 50 / 0.04), 0 8px 24px -12px rgb(60 30 50 / 0.12);
+    --shadow-nav: 0 -1px 0 rgb(60 30 50 / 0.04), 0 -12px 28px -16px rgb(60 30 50 / 0.18);
 }
 
 @layer theme {
     .dark {
-        --color-primary: #ff1493;
-        --color-secondary: #c48b9f;
-        --color-background: #1a1a1a;
-        --color-surface: #2d2d2d;
-        --color-text-primary: #ffffff;
-        --color-text-secondary: #a0a0a0;
-        --color-border: #404040;
-        --color-input: #2d2d2d;
-        --color-input-focus: #3d3d3d;
+        --color-background: #17121A;
+        --color-surface: #221A25;
+        --color-surface-muted: #2D2431;
+        --color-line: #3A2F3F;
+        --color-line-strong: #54465A;
+        --color-ink: #F4ECEF;
+        --color-ink-soft: #B5A6B0;
+
+        --color-primary: #F28BA8;
+        --color-primary-hover: #F6A4BB;
+        --color-on-primary: #2A0F1B;
+        --color-primary-soft: #3F2230;
+
+        --color-period: #F28BA8;
+        --color-period-soft: #4A2230;
+        --color-period-ink: #FFB6C8;
+        --color-fertile: #7FD6B9;
+        --color-fertile-soft: #1F3A33;
+        --color-fertile-ink: #A8E8D3;
+        --color-luteal: #B3A6EA;
+        --color-luteal-soft: #33294F;
+        --color-luteal-ink: #D2C9F6;
+        --color-on-phase: #17121A;
+
+        --color-danger: #FF9A8F;
+        --color-danger-soft: #4A1F1B;
+        --color-danger-ink: #FFC2BB;
+        --color-success-soft: #1D3A2A;
+        --color-success-ink: #A9E3C0;
+
+        --color-input: #1B151E;
+        --color-input-focus: #1B151E;
+
+        --ring-tint: 16%;
+        --tile-t0: 18%;
+        --tile-t1: 36%;
+        --edge-t0: 45%;
+        --fertile-base: var(--color-fertile-soft);
+        --ftile-t0: 8%;
+        --ftile-t1: 26%;
+        --shadow-card: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 10px 28px -14px rgb(0 0 0 / 0.6);
+        --shadow-nav: 0 -1px 0 rgb(255 255 255 / 0.04), 0 -12px 28px -16px rgb(0 0 0 / 0.7);
     }
+}
+
+@layer base {
+    html {
+        color-scheme: light;
+        -webkit-text-size-adjust: 100%;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html.dark { color-scheme: dark; }
+    body {
+        @apply bg-background text-ink font-sans antialiased;
+        font-feature-settings: "ss01", "cv11";
+    }
+    h1, h2, h3 {
+        font-family: var(--font-display);
+        font-variation-settings: "SOFT" 60, "WONK" 0;
+        font-weight: 560;
+        letter-spacing: -0.015em;
+        text-wrap: balance;
+    }
+    :focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+    ::selection { background: var(--color-primary-soft); }
 }
 
 @layer components {
-    input {
-        @apply border-2 rounded-md transition-colors p-2 bg-input focus:bg-input-focus border-secondary text-text-primary
+    input, textarea, select {
+        @apply border rounded-xl transition-colors px-3.5 py-2.5 bg-input text-ink border-line-strong;
     }
-    textarea {
-        @apply border-2 rounded-md transition-colors p-2 bg-input focus:bg-input-focus border-secondary text-text-primary
+    input:focus, textarea:focus, select:focus {
+        @apply bg-input-focus;
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 22%, transparent);
+    }
+    input::placeholder, textarea::placeholder { color: var(--color-ink-soft); opacity: .7; }
+    input[type="date"] { min-height: 2.75rem; }
+
+    /* ROLE: card = a surface that holds content. Use sparingly; plain sections need no card. */
+    .card, .dashboard-card {
+        @apply rounded-[1.75rem] bg-surface border border-line;
+        box-shadow: var(--shadow-card);
+    }
+    /* ROLE: hairline-separated list/group inside a card or on the page */
+    .group-list > * + * { border-top: 1px solid var(--color-line); }
+
+    /* type roles */
+    .display-number {
+        font-family: var(--font-display);
+        font-variation-settings: "SOFT" 80, "WONK" 1, "opsz" 144;
+        font-size: var(--text-display);
+        line-height: 1;
+        letter-spacing: -0.03em;
+        font-weight: 500;
+        font-variant-numeric: lining-nums;
+    }
+    .eyebrow {
+        @apply text-xs font-semibold uppercase text-ink-soft;
+        letter-spacing: 0.09em;
+    }
+    .page-title { @apply font-display text-title text-ink; }
+    .section-title { @apply font-display text-heading text-ink; }
+
+    /* phase roles: set --phase* then use .phase-chip / .phase-fill / .phase-dot */
+    .phase-period  { --phase: var(--color-period);  --phase-soft: var(--color-period-soft);  --phase-ink: var(--color-period-ink); }
+    .phase-fertile { --phase: var(--color-fertile); --phase-soft: var(--color-fertile-soft); --phase-ink: var(--color-fertile-ink); }
+    .phase-luteal  { --phase: var(--color-luteal);  --phase-soft: var(--color-luteal-soft);  --phase-ink: var(--color-luteal-ink); }
+    .phase-fill { background: var(--phase); color: var(--color-on-phase); }
+    .phase-chip {
+        @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap;
+        background: var(--phase-soft);
+        color: var(--phase-ink);
+    }
+    .phase-dot { @apply inline-block h-2 w-2 rounded-full; background: var(--phase); }
+    /* Predicted / uncertain: same hue, soft tint + hatch + dashed edge. Combine with .phase-fill or .phase-chip */
+    .is-predicted {
+        background-color: var(--phase-soft);
+        background-image: repeating-linear-gradient(135deg,
+            color-mix(in srgb, var(--phase) 38%, transparent) 0 1.5px,
+            transparent 1.5px 6px);
+        color: var(--phase-ink);
+        outline: 1.5px dashed color-mix(in srgb, var(--phase) 70%, transparent);
+        outline-offset: -1.5px;
+    }
+
+    /* buttons: no scale-on-hover (glitchy on touch); hover only where hover exists */
+    .btn {
+        @apply inline-flex items-center justify-center font-semibold py-3 px-7 rounded-full text-base transition duration-200 ease-out select-none;
+        min-height: 3rem;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-primary { @apply bg-primary text-on-primary; }
+    .btn-primary:disabled { background: var(--color-surface-muted); color: var(--color-ink-soft); opacity: 1; border: 1px solid var(--color-line); }
+    .btn-secondary { @apply bg-transparent text-primary border border-line-strong; }
+    .btn-white { @apply bg-surface text-primary border border-line; }
+    .btn-danger { background: var(--color-danger); color: var(--color-surface); }
+    @media (hover: hover) {
+        .btn-primary:hover { background: var(--color-primary-hover); }
+        .btn-secondary:hover, .btn-white:hover { background: var(--color-primary-soft); }
+        .btn-danger:hover { filter: brightness(.92); }
     }
 }
 
-.dashboard-card {
-    @apply rounded-xl shadow-sm transition duration-300 ease-in-out;
-    /* remove hover effect if not desired */
-    @apply hover:shadow-md;
-}
-
-
-/* Define reusable button styles - or move to a global CSS / Tailwind plugin */
-.btn {
-    @apply inline-block font-semibold py-3 px-8 rounded-full text-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2;
-}
-
-.btn-primary {
-    @apply bg-primary hover:bg-secondary text-white focus:ring-primary;
-}
-
-.btn-secondary {
-    @apply bg-transparent hover:bg-gray-200 text-primary font-semibold border border-primary hover:border-transparent focus:ring-primary;
-    /* Adjust hover bg/text color as needed */
-}
-
-.btn-white {
-    @apply bg-white text-primary hover:bg-gray-100 focus:ring-white;
-}
-
-/* Example Animations (Install Tailwind CSS Animation plugin or use custom CSS) */
 @keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(20px); }
+    from { opacity: 0; transform: translateY(12px); }
     to { opacity: 1; transform: translateY(0); }
 }
-.animate-fade-in-up {
-    animation: fadeInUp 0.6s ease-out forwards;
-    opacity: 0; /* Start hidden */
-}
-
-/* Stagger animation delays */
+.animate-fade-in-up { animation: fadeInUp 0.5s ease-out forwards; opacity: 0; }
 .animation-delay-300 { animation-delay: 0.3s; }
 .animation-delay-600 { animation-delay: 0.6s; }
-
-/* Adjust Navbar Height Variable */
-.hero-section {
-    /* Example: If your navbar is 80px tall */
-    /* --navbar-height: 80px;  */
-    --navbar-height: 64px; /* Default guess */
+@media (prefers-reduced-motion: reduce) {
+    .animate-fade-in-up { animation: none; opacity: 1; }
+    *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
 }
 
-/* Add more specific scoped styles if needed */
+.hero-section { --navbar-height: 64px; }

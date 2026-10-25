@@ -5,6 +5,12 @@ from app.models import Period
 from app.utils.exceptions import NotFoundError, PeriodLogicError
 
 
+def _emit(user_id: int, event: str, date: datetime.date) -> None:
+    from app.services.webhook_service import WebhookService
+
+    WebhookService.emit(int(user_id), event, date)
+
+
 class PeriodService:
     """Service layer for period tracking logic."""
 
@@ -20,7 +26,9 @@ class PeriodService:
 
         period = Period(user_id=user_id, start_date=start_date)
         try:
-            return period.save()
+            period.save()
+            _emit(user_id, "period_started", start_date)
+            return period
         except Exception as e:
             db.session.rollback()
             # Log e
@@ -30,13 +38,32 @@ class PeriodService:
 
     @staticmethod
     def update_period_end(
-        user_id: int, period_id: int, end_date: datetime.date
+        user_id: int, period_id: int, end_date: datetime.date | None
     ) -> Period:
-        """Updates the end date of an existing period."""
+        """Updates the end date of an existing period.
+
+        A None end_date reopens the period, which is only allowed for the user's
+        most recent period (to undo ending it).
+        """
         period = PeriodService.get_period_by_id_for_user(user_id, period_id)
 
         if not period:
             raise NotFoundError(f"Period with ID {period_id} not found for this user.")
+
+        if end_date is None:
+            latest = (
+                Period.query.filter_by(user_id=user_id)
+                .order_by(Period.start_date.desc())
+                .first()
+            )
+            if latest.id != period.id:
+                raise PeriodLogicError("Only your most recent period can be reopened.")
+            period.end_date = None
+            try:
+                return period.save()
+            except Exception as e:
+                db.session.rollback()
+                raise PeriodLogicError(f"Could not reopen period: {e}") from e
 
         if period.end_date:
             raise PeriodLogicError(f"Period {period_id} already has an end date.")
@@ -46,7 +73,9 @@ class PeriodService:
 
         period.end_date = end_date
         try:
-            return period.save()
+            period.save()
+            _emit(user_id, "period_ended", end_date)
+            return period
         except Exception as e:
             db.session.rollback()
             # Log e

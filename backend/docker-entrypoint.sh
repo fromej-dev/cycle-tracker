@@ -1,41 +1,47 @@
 #!/bin/sh
 # backend/docker-entrypoint.sh
-
-# Exit immediately if a command exits with a non-zero status.
-set -e
-
-# --- Optional: Wait for the database ---
-# In a real deployment, the database might not be ready immediately
-# when the application container starts. It's good practice to wait.
-# This requires a tool like 'nc' (netcat).
-# You would need to parse your DATABASE_URL environment variable
-# to get the host and port. Example assumes a PostgreSQL URL.
 #
-# Example using 'nc' (requires 'netcat-openbsd' package in Alpine):
-# DB_HOST=$(echo $DATABASE_URL | sed -e 's/.*@//' -e 's/:.*//')
-# DB_PORT=$(echo $DATABASE_URL | sed -e 's/.*://' -e 's/\/.*//')
+# 1. applies database migrations (aborts the container on failure),
+# 2. starts gunicorn on 0.0.0.0:${PORT:-5000} unless another command is given.
 #
-# echo "Waiting for database at $DB_HOST:$DB_PORT..."
-# while ! nc -z $DB_HOST $DB_PORT; do
-#   sleep 0.5 # wait for half a second before retrying
-# done
-# echo "Database started."
-# --- End Optional Wait ---
+# Environment:
+#   PORT               listen port (default 5000; Railway injects it)
+#   WEB_CONCURRENCY    gunicorn worker processes (default 2)
+#   GUNICORN_THREADS   threads per worker (default 4)
+#   GUNICORN_TIMEOUT   worker timeout in seconds (default 60)
+#   RUN_MIGRATIONS     set to 0 to skip `flask db upgrade` (default 1)
 
+set -eu
 
-# Set the FLASK_APP environment variable for the 'flask' command
-# This tells the 'flask' command how to find your application factory
-export FLASK_APP=app:create_app\(\)
+export FLASK_APP='app:create_app()'
+PYTHON=/app/.venv/bin/python
 
-# Run database migrations
-echo "Running database migrations..."
-# The 'flask' command uses the FLASK_APP env var to find your app
-# and should be in the PATH from the venv
-/app/.venv/bin/python -m flask db upgrade
-echo "Migrations complete."
+if [ "${RUN_MIGRATIONS:-1}" != "0" ]; then
+  echo "Running database migrations..."
+  # create_app() also validates SECRET_KEY / JWT_SECRET_KEY, so a bad configuration
+  # fails here, before anything is served.
+  if ! "$PYTHON" -m flask db upgrade; then
+    echo "ERROR: database migration failed (bad DATABASE_URL, database unreachable," >&2
+    echo "       insecure/missing SECRET_KEY or JWT_SECRET_KEY, or a broken migration)." >&2
+    echo "       Refusing to start. See the error above." >&2
+    exit 1
+  fi
+  echo "Migrations complete."
+else
+  echo "RUN_MIGRATIONS=0: skipping migrations."
+fi
 
+if [ "$#" -eq 0 ]; then
+  set -- "$PYTHON" -m gunicorn \
+    --bind "0.0.0.0:${PORT:-5000}" \
+    --workers "${WEB_CONCURRENCY:-2}" \
+    --worker-class gthread \
+    --threads "${GUNICORN_THREADS:-4}" \
+    --timeout "${GUNICORN_TIMEOUT:-60}" \
+    --access-logfile - \
+    --error-logfile - \
+    'app:create_app()'
+fi
 
-# Execute the main command (this replaces the entrypoint script process)
-# "$@" expands to all arguments passed to the script (which will be the gunicorn command)
-echo "Executing command: exec $@"
+echo "Executing: $*"
 exec "$@"

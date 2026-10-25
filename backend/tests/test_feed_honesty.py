@@ -1,6 +1,7 @@
 """The ICS feed must never promise more than Date Check does."""
 
 import datetime
+import json
 
 import pytest
 
@@ -18,8 +19,11 @@ TD = datetime.timedelta
 IRREG = [24, 35, 29, 41, 26, 33, 38, 27]
 
 
+TODAY = D(2026, 10, 25)  # pinned: results must not depend on the wall clock
+
+
 def today():
-    return D.today()
+    return TODAY
 
 
 def user_with(db, name, age, gaps, open_last=False):
@@ -166,10 +170,29 @@ def test_fertile_events_are_tight_future_and_clear_of_periods(db, name):
         assert not any(
             f["first"] <= p["last"] and p["first"] <= f["last"] for p in periods
         )
-        days = [
-            f["first"] + TD(days=i) for i in range((f["last"] - f["first"]).days + 1)
-        ]
-        assert max(model.bleeding_probability(days).values()) < 0.2
+        # the bar is P(any bleeding in the window), not the largest single day
+        bar = DateCheckService.check_with_model(model, f["first"], f["last"])
+        assert bar["probability_any"] < 0.2, (name, f, bar["probability_any"])
+
+
+def test_fertile_gate_uses_probability_any_not_the_largest_day(db, monkeypatch):
+    """Regression: a window whose days are each < 0.2 can still be > 0.2 overall."""
+    from app.services import calendar_service as cs
+
+    u = user_with(db, "fg", 10, [28] * 8)
+    u.update(calendar_include_fertile=True)
+    assert any(
+        e["kind"] == "fertile" for e in CalendarService.predicted_events(u, today())
+    )
+    real = cs.DateCheckService.check_with_model
+
+    def over(model, a, b):
+        out = real(model, a, b)
+        return {**out, "probability_any": 0.2235}  # days stay low, overall is not
+
+    monkeypatch.setattr(cs.DateCheckService, "check_with_model", over)
+    events = CalendarService.predicted_events(u, today())
+    assert not [e for e in events if e["kind"] == "fertile"]
 
 
 def test_fertile_window_matches_engine_for_a_regular_user(db):
@@ -208,7 +231,9 @@ def test_hysteresis_keeps_a_published_event_at_forty_percent(db, monkeypatch):
     monkeypatch.setattr(cs.DateCheckService, "check_with_model", fake(0.45))
     assert len(preds()) >= 1  # kept: 0.45 >= 0.40
     monkeypatch.setattr(cs.DateCheckService, "check_with_model", fake(0.35))
-    assert preds() == []  # dropped below the keep threshold
+    # below the keep threshold it is no longer renewed: only held (frozen) for a few
+    # days of grace, never newly confirmed
+    assert all(e.get("grace") for e in preds())
 
 
 def test_timezone_validation_and_local_today():
@@ -310,3 +335,213 @@ def test_empty_calendar_is_deliberate(db):
     out = CalendarService.build_ics(u, today(), datetime.datetime(2026, 10, 25, 6))
     assert out.startswith("BEGIN:VCALENDAR\r\n") and out.endswith("END:VCALENDAR\r\n")
     assert "BEGIN:VEVENT" not in out
+
+
+# --- round 5: identities -------------------------------------------------------------
+
+
+def _render(u, day, hour=6):
+    return CalendarService.build_ics(
+        u, day, datetime.datetime.combine(day, datetime.time(hour))
+    )
+
+
+def _uids_and_dates(u, day):
+    return {
+        e["uid"]: (e["first"], e["last"], e["estimate"])
+        for e in CalendarService.predicted_events(u, day)
+    }
+
+
+def test_logging_and_deleting_a_mistake_keeps_every_identity(db):
+    u = user_with(db, "del", 10, [28] * 8)
+    _render(u, today())
+    before = _uids_and_dates(u, today())
+    day = today() + TD(days=2)
+    spot = Period(user_id=u.id, start_date=day, end_date=day).save()  # spotting
+    _render(u, day)
+    during = _uids_and_dates(u, day)
+    # the predictions did not change identity or jump by a cycle
+    for uid, (first, _last, est) in before.items():
+        if est:
+            assert uid in during
+            assert abs((during[uid][0] - first).days) <= 3
+    db.session.delete(spot)
+    db.session.commit()
+    _render(u, day + TD(days=1))
+    after = _uids_and_dates(u, day + TD(days=1))
+    assert set(after) == set(before)
+    for uid in before:
+        assert abs((after[uid][0] - before[uid][0]).days) <= 1
+
+
+def test_deleting_a_real_logged_period_returns_its_id_to_the_prediction(db):
+    u = user_with(db, "del2", 26, [28] * 8)
+    _render(u, today())
+    predicted = [uid for uid, v in _uids_and_dates(u, today()).items() if v[2]]
+    row = Period(user_id=u.id, start_date=today(), end_date=None).save()  # real period
+    _render(u, today())
+    logged = {uid for uid, v in _uids_and_dates(u, today()).items() if not v[2]}
+    assert predicted[0] in logged  # same UID, now logged
+    db.session.delete(row)
+    db.session.commit()
+    _render(u, today() + TD(days=1))
+    again = [uid for uid, v in _uids_and_dates(u, today() + TD(days=1)).items() if v[2]]
+    assert again[0] == predicted[0]
+
+
+def _sequences(body):
+    import re
+
+    return dict(
+        zip(
+            re.findall(r"UID:(\S+)", body),
+            re.findall(r"SEQUENCE:(\d+)", body),
+            strict=True,
+        )
+    )
+
+
+def test_sequence_never_decreases_across_a_wipe(db):
+    u = user_with(db, "wipe", 10, [28] * 8)
+    best: dict[str, int] = {}
+    for i in range(40):  # a late user: events move, sequences climb
+        for uid, seq in _sequences(_render(u, today() + TD(days=i))).items():
+            assert int(seq) >= best.get(uid, 0)
+            best[uid] = int(seq)
+    assert max(best.values()) > 0
+    for p in Period.query.filter_by(user_id=u.id).all():
+        db.session.delete(p)
+    db.session.commit()
+    assert "BEGIN:VEVENT" not in _render(u, today() + TD(days=40))
+    state = json.loads(u.calendar_state)
+    assert state["events"]  # kept as tombstones, not cleared
+    starts = [today() - TD(days=10) - TD(days=28 * k) for k in range(8, -1, -1)]
+    for s_ in starts:
+        Period(user_id=u.id, start_date=s_, end_date=s_ + TD(days=4)).save()
+    for uid, seq in _sequences(_render(u, today() + TD(days=41))).items():
+        assert int(seq) >= best.get(uid, 0), uid
+        best[uid] = int(seq)
+
+
+def test_uids_depend_on_a_private_key_not_on_secret_key(app, db):
+    u = user_with(db, "key", 10, [28] * 8)
+    token = CalendarService.rotate_token(u)
+    assert token and len(u.calendar_uid_key) == 64
+    first = _sequences(_render(u, today()))
+    old = app.config["SECRET_KEY"]
+    app.config["SECRET_KEY"] = "something-else-entirely"
+    try:
+        second = _sequences(_render(u, today()))
+    finally:
+        app.config["SECRET_KEY"] = old
+    assert list(first) == list(second)  # SECRET_KEY changes do not churn events
+    # nothing derivable from the default key / user id / counter
+    import hashlib
+    import hmac
+
+    for uid in first:
+        head = uid.split("@")[0]
+        for key in (b"you-will-never-guess", b"test-secret-key"):
+            for n in range(1, 12):
+                for kind in ("p", "f"):
+                    msg = f"calendar-uid:{u.id}:{n}:{kind}".encode()
+                    assert hmac.new(key, msg, hashlib.sha256).hexdigest()[:32] != head
+    # rotating gives a fresh key, hence a fresh set of identifiers
+    CalendarService.rotate_token(u)
+    assert set(_sequences(_render(u, today()))).isdisjoint(first)
+
+
+def test_unknown_token_404_is_not_cacheable(client):
+    r = client.get("/calendar/" + "A" * 43 + ".ics")
+    assert r.status_code == 404 and r.headers["Cache-Control"] == "no-store"
+
+
+def test_timezone_rejects_non_zones():
+    assert not CalendarService.valid_timezone("localtime")
+    assert not CalendarService.valid_timezone("posixrules")
+    assert not CalendarService.valid_timezone("Factory")
+    assert CalendarService.valid_timezone("Europe/Amsterdam")
+
+
+def test_published_events_may_grow_before_they_are_dropped(db, monkeypatch):
+    """Hysteresis also covers width and spacing, not only the probability."""
+    from app.services import calendar_service as cs
+
+    u = user_with(db, "wid", 10, [28] * 8)
+    _render(u, today())  # publishes the first predictions
+    published = [
+        e for e in CalendarService.predicted_events(u, today()) if e["estimate"]
+    ]
+    assert published
+    # a fresh user must obey the 21-day cap, a published event may reach 25
+    monkeypatch.setattr(cs, "MAX_EVENT_DAYS", 3)
+    fresh = user_with(db, "wid2", 10, [28] * 8)
+    assert not [
+        e for e in CalendarService.predicted_events(fresh, today()) if e["estimate"]
+    ]
+    kept = [e for e in CalendarService.predicted_events(u, today()) if e["estimate"]]
+    assert kept  # same history, but already published -> kept (width <= 25)
+
+
+def test_a_failing_published_event_is_held_for_a_few_days_then_dropped(db, monkeypatch):
+    from app.services import calendar_service as cs
+
+    u = user_with(db, "grace", 10, [28] * 8)
+    _render(u, today())
+    events = _uids_and_dates(u, today())
+    held = [uid for uid, v in events.items() if v[2]][0]
+    real = cs.CalendarService._window
+
+    def failing(model, pmf, s0, typical, tod, prev_last, max_len, kept):
+        return None
+
+    monkeypatch.setattr(cs.CalendarService, "_window", staticmethod(failing))
+    for day in range(1, cs.GRACE_POLLS + 1):
+        d = today() + TD(days=day)
+        first_poll = _render(u, d)
+        again = _render(u, d, hour=14)  # same-day polls do not use up the grace
+        assert first_poll == again
+        assert held in _uids_and_dates(u, d)
+        assert _uids_and_dates(u, d)[held][:2] == events[held][:2]  # frozen dates
+    late = today() + TD(days=cs.GRACE_POLLS + 1)
+    _render(u, late)
+    assert held not in _uids_and_dates(u, late)
+    monkeypatch.setattr(cs.CalendarService, "_window", staticmethod(real))
+
+
+def test_a_prediction_carried_far_away_gets_a_new_identity(db, monkeypatch):
+    from app.services import calendar_service as cs
+
+    u = user_with(db, "jump", 10, [28] * 8)
+    _render(u, today())
+    before = {uid: v for uid, v in _uids_and_dates(u, today()).items() if v[2]}
+    first_uid = min(before, key=lambda k: before[k][0])
+    real = cs.CalendarService._window
+
+    def far(model, pmf, s0, typical, tod, prev_last, max_len, kept):
+        res = real(model, pmf, s0, typical, tod, prev_last, max_len, kept)
+        if res is None:
+            return None
+        shift = TD(days=cs.JUMP_DAYS + 10)
+        return res[0] + shift, res[1] + shift, res[2] + shift.days, res[3] + shift.days
+
+    monkeypatch.setattr(cs.CalendarService, "_window", staticmethod(far))
+    _render(u, today() + TD(days=1))
+    after = {
+        uid: v for uid, v in _uids_and_dates(u, today() + TD(days=1)).items() if v[2]
+    }
+    assert first_uid not in after  # not "moved by weeks": a new event instead
+    monkeypatch.setattr(cs.CalendarService, "_window", staticmethod(real))
+
+
+def test_spotting_does_not_push_a_real_period_out_of_the_feed(db):
+    u = user_with(db, "spot", 10, [28] * 8)
+    _render(u, today())
+    real_starts = {p.start_date for p in Period.query.filter_by(user_id=u.id).all()}
+    shown_before = {v[0] for v in _uids_and_dates(u, today()).values() if not v[2]}
+    day = today() + TD(days=2)
+    Period(user_id=u.id, start_date=day, end_date=day).save()
+    shown_after = {v[0] for v in _uids_and_dates(u, day).values() if not v[2]}
+    assert shown_before <= shown_after and day in shown_after
+    assert shown_after <= real_starts | {day}

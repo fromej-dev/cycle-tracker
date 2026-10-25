@@ -559,7 +559,9 @@ def test_logged_periods_stay_in_the_feed_with_stable_uids(db, auth_client, test_
     # deleting an OLD period does not change any identity
     rows[0].delete()
     _, events2 = parse(get_ics(c, token).get_data(as_text=True))
-    assert {e["UID"] for e in events} == {e["UID"] for e in events2}
+    assert {e["UID"] for e in events if kind(e) == "l"} == {
+        e["UID"] for e in events2 if kind(e) == "l"
+    }
 
 
 def test_predicted_period_keeps_its_uid_when_it_is_logged(db, auth_client, test_user):

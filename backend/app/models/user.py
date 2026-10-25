@@ -29,6 +29,8 @@ class User(BaseModel):
     # JSON bookkeeping for stable event identities / per-event SEQUENCE (see
     # CalendarService); updated with compare-and-swap, never by the ORM flush.
     calendar_state = db.Column(db.Text)
+    # Random per-feed secret behind the opaque event UIDs (independent of SECRET_KEY).
+    calendar_uid_key = db.Column(db.String(64))
     calendar_include_fertile = db.Column(
         db.Boolean, nullable=False, default=False, server_default=db.false()
     )

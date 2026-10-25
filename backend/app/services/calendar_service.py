@@ -46,6 +46,7 @@ DTSTAMP equals LAST-MODIFIED, the event's last revision.
 from __future__ import annotations
 
 import datetime
+import functools
 import hashlib
 import hmac
 import json
@@ -53,7 +54,6 @@ import re
 import secrets
 import zoneinfo
 
-from flask import current_app
 from sqlalchemy import update
 
 from app.extensions import db
@@ -63,7 +63,7 @@ from app.services.date_check_service import (
     cycle_start_pmfs,
     narrowest_window,
 )
-from app.services.forecast_service import ForecastService
+from app.services.forecast_service import MIN_CYCLE, ForecastService
 from app.utils import ics
 
 DEFAULT_LABEL = "🌙"
@@ -71,7 +71,10 @@ PREDICTED_CYCLES = 3
 LOGGED_KEPT = 2
 WINDOW_MASS = 0.5
 KEEP_MASS = 0.4  # hysteresis for events that are already published
-TOMBSTONES = 12
+TOMBSTONES = 40
+JUMP_DAYS = 14  # a prediction carried further than this gets a new identity
+GRACE_POLLS = 7  # a failing published event keeps its dates this many polls
+KEEP_MAX_DAYS = 25  # published events may grow to this before being dropped
 MIN_GAP = 3  # days between one event's last day and the next one's first
 MAX_EVENT_DAYS = 21
 FERTILE_MAX_DAYS = 10
@@ -80,6 +83,7 @@ PREDICTION_HORIZON_DAYS = 160
 FERTILE_SUFFIX = " ·"
 ESTIMATE_MARK = " ~"
 PRODID = "-//private-feed//EN"
+_NOT_ZONES = frozenset({"localtime", "posixrules", "Factory"})
 TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{20,128}$")
 _DUMMY_HASH = hashlib.sha256(b"cycle-tracker-no-such-token").hexdigest()
 
@@ -99,7 +103,12 @@ class CalendarService:
     def rotate_token(user: User) -> str:
         """Create a new token (invalidating any previous one). Returned once."""
         token = secrets.token_urlsafe(32)
-        user.update(calendar_token_hash=hash_token(token))
+        # A new subscription gets a new secret for its event identifiers.
+        user.update(
+            calendar_token_hash=hash_token(token),
+            calendar_uid_key=secrets.token_hex(32),
+            calendar_state=None,
+        )
         return token
 
     @staticmethod
@@ -161,15 +170,23 @@ class CalendarService:
     # --- time zone ------------------------------------------------------------------
 
     @staticmethod
+    @functools.cache
+    def _zone_names() -> frozenset[str]:
+        return frozenset(zoneinfo.available_timezones()) - _NOT_ZONES
+
+    @staticmethod
     def valid_timezone(name: str) -> bool:
-        """True for an IANA zone name known to zoneinfo (no paths, no oddities)."""
-        if not name or len(name) > 64 or not re.fullmatch(r"[A-Za-z0-9_+\-/]+", name):
+        """True for a real IANA zone name (no paths, no localtime/posixrules/Factory)."""
+        if not name or len(name) > 64 or name in _NOT_ZONES:
             return False
-        try:
+        names = CalendarService._zone_names()
+        if names:
+            return name in names
+        try:  # no tz database enumeration available: fall back to a strict lookup
             zoneinfo.ZoneInfo(name)
         except (zoneinfo.ZoneInfoNotFoundError, ValueError, OSError):
             return False
-        return True
+        return re.fullmatch(r"[A-Za-z0-9_+\-/]+", name) is not None
 
     @staticmethod
     def local_today(user: User) -> datetime.date:
@@ -185,7 +202,13 @@ class CalendarService:
 
     @staticmethod
     def _load_state(raw: str | None) -> dict:
-        state = {"counter": 0, "slots": [], "adopted": {}, "events": {}}
+        state = {
+            "counter": 0,
+            "slots": [],
+            "adopted": {},
+            "from_slots": [],
+            "events": {},
+        }
         if raw:
             try:
                 loaded = json.loads(raw)
@@ -200,10 +223,30 @@ class CalendarService:
         return json.dumps(state, sort_keys=True, separators=(",", ":"))
 
     @staticmethod
-    def _uid(user: User, n: int, kind: str) -> str:
-        key = str(current_app.config.get("SECRET_KEY", "")).encode()
-        msg = f"calendar-uid:{user.id}:{n}:{kind}".encode()
-        return hmac.new(key, msg, hashlib.sha256).hexdigest()[:32] + "@feed"
+    def _uid(key: str, n: int, kind: str) -> str:
+        """Opaque event id: HMAC under the feed's own random secret (not SECRET_KEY),
+        so it reveals neither the user, the counter nor the kind of event."""
+        msg = f"{n}:{kind}".encode()
+        return (
+            hmac.new(bytes.fromhex(key), msg, hashlib.sha256).hexdigest()[:32] + "@feed"
+        )
+
+    @staticmethod
+    def _uid_key(user: User, persist: bool) -> str:
+        key = user.calendar_uid_key
+        if key:
+            return key
+        key = secrets.token_hex(32)
+        if persist:  # first render of a feed created before the key existed
+            db.session.execute(
+                update(User)
+                .where(User.id == user.id, User.calendar_uid_key.is_(None))
+                .values(calendar_uid_key=key)
+            )
+            db.session.commit()
+            db.session.refresh(user)
+            key = user.calendar_uid_key or key
+        return key
 
     @staticmethod
     def _compare_and_swap(user: User, old: str | None, new: str) -> bool:
@@ -222,32 +265,71 @@ class CalendarService:
     # --- events ---------------------------------------------------------------------
 
     @staticmethod
-    def _events(user: User, today: datetime.date, state: dict) -> list[dict]:
+    def _events(
+        user: User, today: datetime.date, state: dict, key: str | None = None
+    ) -> list[dict]:
         """Event dicts (kind, uid, first, last, estimate). Mutates ``state``."""
+        key = key or user.calendar_uid_key or "00" * 32
 
         def mint() -> int:
             state["counter"] += 1
             return state["counter"]
 
         rows = Period.query.filter_by(user_id=user.id).order_by(Period.start_date).all()
-        model = ForecastService.fit([(p.start_date, p.end_date) for p in rows], today)
-        if model.last_start is None:
-            state["adopted"] = {}
-            state["events"] = {}
-            return []
-        typical = min(max(round(model.duration_post.mu), 2), 8)
         slots: list[int] = list(state["slots"])
         adopted: dict[str, int] = state["adopted"]
+        from_slots: list[int] = state.setdefault("from_slots", [])
+
+        # --- a deleted period gives its id back to the prediction it came from -----
+        existing = {str(r.id) for r in rows}
+        for rid, n in list(adopted.items()):
+            if rid in existing:
+                continue
+            del adopted[rid]
+            if n in from_slots:
+                from_slots.remove(n)
+                if all(n > m for m in from_slots):  # only the most recent adoption
+                    slots.insert(0, n)
+                    del slots[PREDICTED_CYCLES:]
+
+        # --- recently logged periods; a real new period adopts the first slot ------
+        # Rows starting < MIN_CYCLE days after the previous bleed are merged into it by
+        # the model (spotting, double logs): they never take a prediction's identity.
+        merged: set[int] = set()
+        prev_start = None
+        for row in rows:
+            if (
+                prev_start is not None
+                and (row.start_date - prev_start).days < MIN_CYCLE
+            ):
+                merged.add(row.id)
+            else:
+                prev_start = row.start_date
+        real = [r for r in rows if r.id not in merged][-LOGGED_KEPT:]
+        shown = rows[rows.index(real[0]) :] if real else []
+        # (merged rows after the first shown period are shown too, so a spotting log
+        # never pushes a real period out of the feed)
+        for row in shown:
+            if str(row.id) in adopted:
+                continue
+            if row.id in merged or not slots:
+                n = mint()
+            else:
+                n = slots.pop(0)
+                from_slots.append(n)
+            adopted[str(row.id)] = n
+        state["from_slots"] = [n for n in from_slots if n in adopted.values()]
+        while len(slots) < PREDICTED_CYCLES:
+            slots.append(mint())
+        state["slots"] = slots
+
+        model = ForecastService.fit([(p.start_date, p.end_date) for p in rows], today)
+        if model.last_start is None:
+            return []  # state["events"] stays: it becomes tombstones (SEQUENCE kept)
+        typical = min(max(round(model.duration_post.mu), 2), 8)
         published = state["events"]
         events: list[dict] = []
-
-        # --- recently logged periods; a new one adopts the first predicted slot ----
-        shown = rows[-LOGGED_KEPT:]
         for row in shown:
-            n = adopted.get(str(row.id))
-            if n is None:
-                n = slots.pop(0) if slots else mint()
-                adopted[str(row.id)] = n
             if row.end_date is not None:
                 last = row.end_date
             elif row is rows[-1] and model.ongoing:
@@ -257,17 +339,12 @@ class CalendarService:
             events.append(
                 {
                     "kind": "period",
-                    "uid": CalendarService._uid(user, n, "p"),
+                    "uid": CalendarService._uid(key, adopted[str(row.id)], "p"),
                     "first": row.start_date,
                     "last": last,
                     "estimate": False,
                 }
             )
-        keep_ids = {str(r.id) for r in shown}
-        state["adopted"] = {k: v for k, v in adopted.items() if k in keep_ids}
-        while len(slots) < PREDICTED_CYCLES:
-            slots.append(mint())
-        state["slots"] = slots
         if model.overdue:
             return CalendarService._finish(events, state)
 
@@ -278,25 +355,52 @@ class CalendarService:
         max_len = min(MAX_EVENT_DAYS, max(round(model.mean_cycle), 1))
         prev_last = max(e["last"] for e in events)
         for k, pmf in enumerate(pmfs, start=1):
-            uid = CalendarService._uid(user, slots[k - 1], "p")
-            kept = uid in published and not published[uid].get("x")
-            win = narrowest_window(pmf, WINDOW_MASS)
-            if win is None and kept:
-                win = narrowest_window(pmf, KEEP_MASS)
-            if win is None:
+            uid = CalendarService._uid(key, slots[k - 1], "p")
+            rec = published.get(uid)
+            kept = bool(rec) and not rec.get("x")
+
+            def evaluate(is_kept: bool, pmf=pmf, prev_last=prev_last):
+                return CalendarService._window(
+                    model, pmf, s0, typical, today, prev_last, max_len, is_kept
+                )
+
+            res = evaluate(kept)
+            if res and rec and rec.get("a"):
+                moved = abs((res[0] - datetime.date.fromisoformat(rec["a"])).days)
+                if moved > JUMP_DAYS:
+                    # the forecast carried this prediction far away (or it comes back
+                    # after a pause far from where it was): a different event, not
+                    # the old one "moving" by weeks
+                    again = evaluate(False) if kept else res
+                    if again:
+                        slots[k - 1] = mint()
+                        uid = CalendarService._uid(key, slots[k - 1], "p")
+                        res, kept, rec = again, False, None
+                    else:
+                        res = None
+            if res is None:
+                # grace counts days, not renders: same-day polls must agree
+                prior = (rec or {}).get("g", 0)
+                same_day = (rec or {}).get("gd") == today.isoformat()
+                grace = prior if same_day else prior + 1
+                if kept and rec.get("a") and grace <= GRACE_POLLS:
+                    first = datetime.date.fromisoformat(rec["a"])
+                    last = datetime.date.fromisoformat(rec["b"])
+                    if last >= today:  # hold the old dates for a few polls
+                        events.append(
+                            {
+                                "kind": "period",
+                                "uid": uid,
+                                "first": first,
+                                "last": last,
+                                "estimate": True,
+                                "grace": grace,
+                            }
+                        )
+                        prev_last = last
+                        continue
                 break
-            lo, hi, _ = win
-            first = s0 + TD(days=lo)
-            last = s0 + TD(days=hi) + TD(days=typical - 1)
-            if last < today or (last - first).days + 1 > max_len:
-                break
-            if first < prev_last + TD(days=MIN_GAP + 1):
-                break
-            gate_from = max(first, today)
-            check = DateCheckService.check_with_model(model, gate_from, last)
-            threshold = KEEP_MASS if kept else WINDOW_MASS
-            if (check["probability_any"] or 0.0) < threshold or check["horizon_note"]:
-                break
+            first, last, lo, hi = res
             events.append(
                 {
                     "kind": "period",
@@ -309,14 +413,40 @@ class CalendarService:
             prev_last = last
             if user.calendar_include_fertile:
                 fertile = CalendarService._fertile(
-                    user, model, today, slots[k - 1], s0, lo, hi, events
+                    key, model, today, slots[k - 1], s0, lo, hi, events
                 )
                 if fertile:
                     events.append(fertile)
         return CalendarService._finish(events, state)
 
     @staticmethod
-    def _fertile(user, model, today, slot, s0, lo, hi, events) -> dict | None:
+    def _window(model, pmf, s0, typical, today, prev_last, max_len, kept):
+        """(first, last, lo, hi) of one publishable predicted period, else None.
+
+        Hysteresis: a published event (``kept``) may be wider, closer to its
+        predecessor and a little less probable than a new one.
+        """
+        win = narrowest_window(pmf, WINDOW_MASS)
+        if win is None and kept:
+            win = narrowest_window(pmf, KEEP_MASS)
+        if win is None:
+            return None
+        lo, hi, _ = win
+        first = s0 + TD(days=lo)
+        last = s0 + TD(days=hi) + TD(days=typical - 1)
+        width_cap = max(max_len, KEEP_MAX_DAYS) if kept else max_len
+        min_first = prev_last + TD(days=2 if kept else MIN_GAP + 1)
+        if last < today or (last - first).days + 1 > width_cap or first < min_first:
+            return None
+        # the gate sees the exact event dates (first >= today for predictions)
+        check = DateCheckService.check_with_model(model, first, last)
+        threshold = KEEP_MASS if kept else WINDOW_MASS
+        if (check["probability_any"] or 0.0) < threshold or check["horizon_note"]:
+            return None
+        return first, last, lo, hi
+
+    @staticmethod
+    def _fertile(key, model, today, slot, s0, lo, hi, events) -> dict | None:
         """Fertile window for one cycle: ovulation = start - 14, window -5..+1."""
         first = s0 + TD(days=lo - 19)
         last = s0 + TD(days=hi - 13)
@@ -325,12 +455,13 @@ class CalendarService:
         first = max(first, today)
         if any(first <= e["last"] and e["first"] <= last for e in events):
             return None
-        days = [first + TD(days=i) for i in range((last - first).days + 1)]
-        if max(model.bleeding_probability(days).values()) >= FERTILE_MAX_BLEED:
+        # the bar is P(any bleeding in the window), not the largest single day
+        check = DateCheckService.check_with_model(model, first, last)
+        if (check["probability_any"] or 0.0) >= FERTILE_MAX_BLEED:
             return None
         return {
             "kind": "fertile",
-            "uid": CalendarService._uid(user, slot, "f"),
+            "uid": CalendarService._uid(key, slot, "f"),
             "first": first,
             "last": last,
             "estimate": True,
@@ -347,7 +478,8 @@ class CalendarService:
     ) -> list[dict]:
         """Events as they would be published now (read-only: nothing is stored)."""
         state = state or CalendarService._load_state(user.calendar_state)
-        return CalendarService._events(user, today, copy_state(state))
+        key = CalendarService._uid_key(user, persist=False)
+        return CalendarService._events(user, today, copy_state(state), key)
 
     # --- rendering --------------------------------------------------------------------
 
@@ -364,10 +496,11 @@ class CalendarService:
         label = CalendarService.display_label(user)
         fertile_label = user.calendar_fertile_label or f"{label}{FERTILE_SUFFIX}"
         mark = ESTIMATE_MARK if user.calendar_mark_estimate else ""
+        key = CalendarService._uid_key(user, persist)
         for _attempt in range(3):
             old = user.calendar_state
             state = CalendarService._load_state(old)
-            events = CalendarService._events(user, today, state)
+            events = CalendarService._events(user, today, state, key)
             body = []
             seen = {}
             for ev in events:
@@ -380,16 +513,29 @@ class CalendarService:
                     f"{dtstart}|{dtend}|{summary}".encode()
                 ).hexdigest()[:16]
                 prev = state["events"].get(ev["uid"])
+                span = {"a": ev["first"].isoformat(), "b": ev["last"].isoformat()}
+                grace = ev.get("grace", 0)
                 if prev is None:
-                    rec = {"h": digest, "s": 0, "t": ics.datetime_utc_value(now)}
+                    rec = {
+                        "h": digest,
+                        "s": 0,
+                        "t": ics.datetime_utc_value(now),
+                        **span,
+                    }
                 elif prev["h"] != digest or prev.get("x"):
                     rec = {
                         "h": digest,
                         "s": prev["s"] + 1,
                         "t": ics.datetime_utc_value(now),
+                        **span,
                     }
                 else:
-                    rec = prev
+                    rec = {k_: v for k_, v in prev.items() if k_ != "g"}
+                    rec.update(span)
+                rec.pop("gd", None)
+                if grace:
+                    rec["g"] = grace
+                    rec["gd"] = today.isoformat()
                 seen[ev["uid"]] = rec
                 body.append((ev["uid"], dtstart, dtend, summary, rec))
             # Keep a few tombstones so a UID that comes back continues its SEQUENCE.

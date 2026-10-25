@@ -1,5 +1,5 @@
-from apiflask import APIBlueprint, abort
-from flask import Response, request
+from apiflask import APIBlueprint
+from flask import Response, jsonify, request
 
 from app.services.calendar_service import CalendarService
 
@@ -19,7 +19,10 @@ def get_calendar_feed(token: str):
     """
     user = CalendarService.find_user_by_token(token)
     if user is None:
-        abort(404, message="Not found")
+        missing = jsonify({"error": "Resource not found."})
+        missing.status_code = 404
+        missing.headers["Cache-Control"] = "no-store"
+        return missing
     # HEAD (and any non-GET) must never write
     body = CalendarService.build_ics(user, persist=request.method == "GET")
     response = Response(body, mimetype="text/calendar")

@@ -87,35 +87,35 @@ MIN_INTENSITY_HORIZON = 400  # intensities are computed once for at least this
 # CALIBRATION: tempering exponent T, p -> p**(1/T), set so the 80% interval covers 80%.
 CALIBRATION: dict[tuple[str, int, bool], float] = {
     ("irregular", 0, False): 1.15,
-    ("irregular", 0, True): 1.05,
+    ("irregular", 0, True): 1.0,
     ("irregular", 1, False): 1.1,
-    ("irregular", 1, True): 1.0,
+    ("irregular", 1, True): 0.95,
     ("irregular", 2, False): 1.15,
-    ("irregular", 2, True): 0.95,
+    ("irregular", 2, True): 0.9,
     ("learning", 0, False): 1.15,
-    ("learning", 0, True): 1.0,
+    ("learning", 0, True): 0.95,
     ("learning", 1, False): 1.15,
-    ("learning", 1, True): 1.0,
+    ("learning", 1, True): 0.9,
     ("learning", 2, False): 1.1,
-    ("learning", 2, True): 1.0,
+    ("learning", 2, True): 0.85,
     ("regular", 0, False): 1.0,
-    ("regular", 0, True): 0.95,
+    ("regular", 0, True): 0.9,
     ("regular", 1, False): 1.0,
-    ("regular", 1, True): 0.95,
+    ("regular", 1, True): 0.9,
     ("regular", 2, False): 1.05,
-    ("regular", 2, True): 1.0,
+    ("regular", 2, True): 0.85,
     ("variable", 0, False): 1.1,
-    ("variable", 0, True): 1.0,
+    ("variable", 0, True): 0.95,
     ("variable", 1, False): 1.15,
-    ("variable", 1, True): 0.95,
+    ("variable", 1, True): 0.9,
     ("variable", 2, False): 1.1,
-    ("variable", 2, True): 0.9,
+    ("variable", 2, True): 0.85,
 }
 
 # CALIBRATION_Q50: model mass of the displayed "50%" interval, set so it covers 50%.
 CALIBRATION_Q50: dict[tuple[str, int, bool], float] = {
     ("irregular", 0, False): 0.5,
-    ("irregular", 0, True): 0.54,
+    ("irregular", 0, True): 0.56,
     ("irregular", 1, False): 0.5,
     ("irregular", 1, True): 0.52,
     ("irregular", 2, False): 0.48,
@@ -123,15 +123,15 @@ CALIBRATION_Q50: dict[tuple[str, int, bool], float] = {
     ("learning", 0, False): 0.48,
     ("learning", 0, True): 0.56,
     ("learning", 1, False): 0.48,
-    ("learning", 1, True): 0.52,
+    ("learning", 1, True): 0.56,
     ("learning", 2, False): 0.46,
-    ("learning", 2, True): 0.48,
+    ("learning", 2, True): 0.46,
     ("regular", 0, False): 0.46,
-    ("regular", 0, True): 0.46,
+    ("regular", 0, True): 0.48,
     ("regular", 1, False): 0.46,
-    ("regular", 1, True): 0.48,
+    ("regular", 1, True): 0.5,
     ("regular", 2, False): 0.4,
-    ("regular", 2, True): 0.46,
+    ("regular", 2, True): 0.42,
     ("variable", 0, False): 0.5,
     ("variable", 0, True): 0.52,
     ("variable", 1, False): 0.48,
@@ -237,6 +237,7 @@ class _CycleFit:
     groups: tuple[tuple[float, tuple[float, ...]], ...]  # (weight, pmf) per mu group
     main: tuple[float, ...]  # posterior predictive of an ordinary cycle
     skip2: tuple[float, ...]  # a skipped log: two ordinary cycles merged into one gap
+    skip3: tuple[float, ...]  # two skipped logs in a row: three cycles in one gap
     pi_skip: float  # P(next logged gap swallows a skipped log)
     pi_disrupted: float  # P(next cycle is disrupted/very long)
 
@@ -313,6 +314,14 @@ def _fit_cycles(cycles: tuple[int, ...], n_excluded: int = 0) -> _CycleFit:
             skip2[i + j + MIN_CYCLE] += a * main[j]
     t = sum(skip2)
     skip2 = [v / t for v in skip2]
+    skip3 = [0.0] * n_pmf
+    for i, a in enumerate(skip2):
+        if a < 1e-7:
+            continue
+        for j in range(n_pmf - MIN_CYCLE - i):
+            skip3[i + j + MIN_CYCLE] += a * main[j]
+    t = sum(skip3)
+    skip3 = [v / t for v in skip3] if t > 0 else skip2
 
     n_gaps = len(cycles) + n_excluded
     pi_skip = min(_skip_probability(n_excluded, n_gaps), MAX_SKIP_WEIGHT)
@@ -321,7 +330,9 @@ def _fit_cycles(cycles: tuple[int, ...], n_excluded: int = 0) -> _CycleFit:
         / (DISRUPTED_PRIOR_N + n_gaps),
         MAX_DISRUPTED_WEIGHT,
     )
-    return _CycleFit(tuple(groups), tuple(main), tuple(skip2), pi_skip, pi_dis)
+    return _CycleFit(
+        tuple(groups), tuple(main), tuple(skip2), tuple(skip3), pi_skip, pi_dis
+    )
 
 
 # --- Duration model ------------------------------------------------------------------
@@ -417,15 +428,108 @@ def mode_index(pmf: list[float]) -> int:
     return max(range(len(pmf)), key=lambda i: (pmf[i], -i))
 
 
+MODE_VALLEY_RATIO = 0.5  # a dip below this fraction of the lower peak separates modes
+MODE_MIN_MASS = 0.12  # a separate mode must hold at least this much probability
+
+
+def mode_components(pmf: list[float]) -> list[tuple[int, int, float]]:
+    """Split a pmf into its significant modes: [(start, end, mass)] left to right.
+
+    Modes are separated at valleys deeper than MODE_VALLEY_RATIO of the lower
+    neighbouring peak (on a 3-day smoothed pmf); components lighter than
+    MODE_MIN_MASS are folded into their neighbour.
+    """
+    n = len(pmf)
+    sm = [
+        (pmf[max(i - 1, 0)] + pmf[i] + pmf[min(i + 1, n - 1)]) / 3.0 for i in range(n)
+    ]
+    peaks = [
+        i
+        for i in range(n)
+        if sm[i] > 0
+        and (i == 0 or sm[i] >= sm[i - 1])
+        and (i == n - 1 or sm[i] > sm[i + 1])
+    ]
+    if not peaks:
+        return [(0, n - 1, 1.0)]
+    kept = [peaks[0]]
+    valleys: list[int] = []
+    for pk in peaks[1:]:
+        last = kept[-1]
+        v = min(range(last, pk + 1), key=lambda i: sm[i])
+        if sm[v] < MODE_VALLEY_RATIO * min(sm[last], sm[pk]):
+            kept.append(pk)
+            valleys.append(v)
+        elif sm[pk] > sm[last]:
+            kept[-1] = pk
+    bounds = [0, *[v + 1 for v in valleys], n]
+    comps = [
+        (bounds[i], bounds[i + 1] - 1, sum(pmf[bounds[i] : bounds[i + 1]]))
+        for i in range(len(kept))
+    ]
+    # Fold light components into the heavier neighbour.
+    while len(comps) > 1:
+        i = min(range(len(comps)), key=lambda k: comps[k][2])
+        if comps[i][2] >= MODE_MIN_MASS:
+            break
+        j = (
+            i - 1
+            if i > 0 and (i == len(comps) - 1 or comps[i - 1][2] >= comps[i + 1][2])
+            else i + 1
+        )
+        lo, hi = min(i, j), max(i, j)
+        merged = (comps[lo][0], comps[hi][1], comps[lo][2] + comps[hi][2])
+        comps[lo : hi + 1] = [merged]
+    return comps
+
+
+def is_multimodal(pmf: list[float]) -> bool:
+    return len(mode_components(pmf)) > 1
+
+
+def headline_index(pmf: list[float]) -> int:
+    """User-facing point estimate: the mode, or if multimodal the near-term mode.
+
+    With two distinct possibilities (say "a few days late" and "a forgotten log, so
+    two cycles") the argmax can sit on a far, narrow spike. The headline then is the
+    median of the EARLIEST significant mode (what the user should plan around);
+    ``secondary_window`` reports the other mode and the probability it holds.
+    """
+    comps = mode_components(pmf)
+    if len(comps) == 1:
+        return mode_index(pmf)
+    s, e, mass = comps[0]
+    acc = 0.0
+    for i in range(s, e + 1):
+        acc += pmf[i]
+        if acc >= mass / 2:
+            return i
+    return e
+
+
+def secondary_component(pmf: list[float], point: int) -> tuple[int, int, float] | None:
+    """The heaviest significant mode not containing ``point``, trimmed to its bulk."""
+    others = [c for c in mode_components(pmf) if not c[0] <= point <= c[1]]
+    if not others:
+        return None
+    s, e, mass = max(others, key=lambda c: c[2])
+    peak = max(pmf[s : e + 1])
+    while s < e and pmf[s] < 0.02 * peak:
+        s += 1
+    while e > s and pmf[e] < 0.02 * peak:
+        e -= 1
+    return s, e, mass
+
+
 def point_and_intervals(
     pmf: list[float], truncated: bool = False, q50: float = 0.5
 ) -> tuple[int, tuple[int, int, float], tuple[int, int, float]]:
-    """Mode plus nested 50% and 80% index intervals that contain it.
+    """Headline point plus nested 50% and 80% index intervals that contain it.
 
     ``q50`` is the model mass of the "50%" interval; recalibration lowers it where
     day-discretisation and a pinned mode make a 0.5-mass interval over-cover.
     """
-    pt = mode_index(pmf)
+    pt = headline_index(pmf)
     i50 = _hdi(pmf, q50, pt)
     i80 = _hdi(pmf, 0.8, pt)
     if i80[0] > i50[0] or i80[1] < i50[1]:  # keep nested
@@ -540,11 +644,11 @@ class FittedModel:
         # (two cycles merged), or a disrupted/very long cycle, with per-user weights.
         f = self._fit
         self.pi_skip, self.pi_disrupted = f.pi_skip, f.pi_disrupted
-        w_main = 1 - f.pi_skip - f.pi_disrupted
+        w_main = 1 - f.pi_skip - f.pi_skip**2 - f.pi_disrupted
         dis = _disrupted_pmf()
         self._unc = [
-            w_main * m + f.pi_disrupted * d + f.pi_skip * k
-            for m, d, k in zip(f.main, dis, f.skip2, strict=True)
+            w_main * m + f.pi_disrupted * d + f.pi_skip * k + f.pi_skip**2 * k3
+            for m, d, k, k3 in zip(f.main, dis, f.skip2, f.skip3, strict=True)
         ]
         self._build_start_pmf()
         self._intensity_cache: tuple[int, list[StartGroup]] | None = None
@@ -681,11 +785,12 @@ class FittedModel:
         cycles convolve each group's cycle pmf, so the shared uncertainty about the
         user's mean grows with horizon."""
         f = self._fit
-        w_main = 1 - f.pi_skip - f.pi_disrupted
+        w_main = 1 - f.pi_skip - f.pi_skip**2 - f.pi_disrupted
         groups = (
             [(w_main * w, pmf) for w, pmf in f.groups]
             + [(f.pi_disrupted, _disrupted_pmf())]
             + [(f.pi_skip, f.skip2)]
+            + [(f.pi_skip**2, f.skip3)]
         )
         out = []
         for w, pmf in groups:
@@ -821,6 +926,18 @@ class FittedModel:
     ) -> tuple[int, tuple[int, int, float], tuple[int, int, float]]:
         return point_and_intervals(self._p1, self._truncated, self._q50)
 
+    def _secondary_window(self, point: int) -> dict | None:
+        """The other mode of a multimodal start distribution, if any."""
+        comp = secondary_component(self._p1, point)
+        if comp is None:
+            return None
+        s, e, mass = comp
+        return {
+            "start": self._date(s),
+            "end": self._date(e),
+            "probability": round(mass, 4),
+        }
+
     def _is_late(self) -> bool:
         """Today is beyond the 90th percentile of the unconditioned cycle length."""
         if self.last_start is None or self._ongoing():
@@ -850,6 +967,7 @@ class FittedModel:
         base = {
             "most_likely_start": None,
             "median_start": None,
+            "secondary_window": None,
             "interval_50": None,
             "interval_80": None,
             "probability_next_3_days": None,
@@ -892,6 +1010,7 @@ class FittedModel:
             **base,
             "most_likely_start": self._date(pt),
             "median_start": self._date(_median_index(pmf)),
+            "secondary_window": self._secondary_window(pt),
             "interval_50": {"start": self._date(i50[0]), "end": self._date(i50[1])},
             "interval_80": {"start": self._date(i80[0]), "end": self._date(i80[1])},
             "probability_next_3_days": min(p3, 1.0),

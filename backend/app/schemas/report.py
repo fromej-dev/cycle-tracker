@@ -86,11 +86,26 @@ class ForecastFertileWindowSchema(Schema):
     ovulation_interval_80 = fields.Nested(DateIntervalSchema, allow_none=True)
 
 
+class SecondaryWindowSchema(Schema):
+    start = fields.Date(allow_none=True)
+    end = fields.Date(allow_none=True)
+    probability = fields.Float(allow_none=True)
+
+
 class ForecastSchema(Schema):
     """Probabilistic forecast of the next period start."""
 
     most_likely_start = fields.Date(allow_none=True)
     median_start = fields.Date(allow_none=True)
+    secondary_window = fields.Nested(
+        SecondaryWindowSchema,
+        allow_none=True,
+        metadata={
+            "description": "Another distinct possibility when the forecast is multimodal "
+            "(e.g. a forgotten log: roughly two cycles); most_likely_start is then the "
+            "median and the intervals are contiguous around it."
+        },
+    )
     interval_50 = fields.Nested(DateIntervalSchema, allow_none=True)
     interval_80 = fields.Nested(DateIntervalSchema, allow_none=True)
     probability_next_3_days = fields.Float(allow_none=True)

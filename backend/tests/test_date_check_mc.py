@@ -1,7 +1,7 @@
 """Date Check against a Monte Carlo simulation of the forecast engine's own model.
 
 The simulator draws a first cycle from the engine's conditioned next-start
-distribution, picks the cycle-length group (ordinary / disrupted / skipped-log) in
+distribution, picks the cycle-length group (ordinary / disrupted / skipped logs) in
 proportion to its posterior weight given that cycle, then keeps drawing later cycles
 from that group, with period lengths from the engine's duration distribution. It is
 independent of the closed-form formula in ``DateCheckService``.
@@ -15,7 +15,7 @@ import pytest
 
 from app.services import ForecastService
 from app.services.date_check_service import DateCheckService
-from app.services.forecast_service import MAX_DURATION, MIN_CYCLE, _disrupted_pmf
+from app.services.forecast_service import MAX_DURATION, MIN_CYCLE
 
 D = datetime.date
 TD = datetime.timedelta
@@ -48,22 +48,26 @@ def _draw(cum, rng):
 
 
 def simulate(model, max_off, n, seed):
-    """Sets of bleeding day offsets (days after the last logged start)."""
+    """Sets of bleeding day offsets (days after the last logged start).
+
+    Uses only the engine's public API: ``start_intensities`` (group weights and cycle
+    pmfs), ``next_start_pmf`` and ``duration_cdf``.
+    """
     rng = random.Random(seed)
-    f = model._fit
-    w_main = 1 - f.pi_skip - f.pi_disrupted
-    groups = (
-        [(w_main * w, pmf) for w, pmf in f.groups]
-        + [(f.pi_disrupted, _disrupted_pmf())]
-        + [(f.pi_skip, f.skip2)]
-    )
-    p1, unc = model.next_start_pmf(), model._unc
+    groups = model.start_intensities(MIN_CYCLE)
     steps = []
-    for _, pmf in groups:
-        st = [v if v > 2e-5 else 0.0 for v in pmf]
-        steps.append(_cum(st))
+    unc: dict[int, float] = {}
+    for g in groups:
+        pmf = dict(g.step)
+        steps.append(pmf)
+        for length, q in pmf.items():
+            unc[length] = unc.get(length, 0.0) + g.weight * q
+    step_cum = [(sorted(pmf), _cum([pmf[k] for k in sorted(pmf)])) for pmf in steps]
+    p1 = model.next_start_pmf()
     first_cum = _cum(p1)
-    dur_cum = _cum(model._duration_pmf)
+    durations = list(range(1, MAX_DURATION + 1))
+    dur_pmf = [model.duration_cdf(d) - model.duration_cdf(d - 1) for d in durations]
+    dur_cum = _cum(dur_pmf)
     out = []
     for _ in range(n):
         bleed: set[int] = set()
@@ -76,13 +80,15 @@ def simulate(model, max_off, n, seed):
                     break
             bleed.update(range(d0))
         i1 = _draw(first_cum, rng)
-        weights = [w * pmf[i1] / unc[i1] if unc[i1] > 0 else 0.0 for w, pmf in groups]
+        length1 = MIN_CYCLE + i1
+        weights = [g.weight * steps[j].get(length1, 0.0) for j, g in enumerate(groups)]
         g = _draw(_cum(weights), rng)
-        s = MIN_CYCLE + i1
+        s = length1
         while s <= max_off:
             d = _draw(dur_cum, rng) + 1
             bleed.update(range(s, min(s + d, max_off + 1)))
-            s += MIN_CYCLE + _draw(steps[g], rng)
+            lengths, cum = step_cum[g]
+            s += lengths[_draw(cum, rng)]
         out.append(bleed)
     return out
 

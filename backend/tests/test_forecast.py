@@ -4,6 +4,7 @@ from flask import url_for
 
 from app.models import Period
 from app.services import ForecastService, ReportService
+from app.services.forecast_service import is_multimodal, mode_components
 from scripts.backtest_forecast import (
     EVAL_SEEDS,
     EVAL_USERS,
@@ -360,7 +361,7 @@ def test_late_regular_user_label_is_downgraded():
 def test_most_likely_is_the_true_mode_and_median_is_separate():
     periods = make_periods(D(2023, 1, 1), [28] * 8)
     last = periods[-1][0]
-    today = last + TD(days=38)  # 10 days late
+    today = last + TD(days=48)  # 20 days late: unimodal, mode is the headline
     fc = ForecastService.fit(periods, today).forecast()
     by_day = {d["date"]: d["p_start"] for d in fc["days"]}
     best = max(by_day, key=lambda d: (by_day[d], -d.toordinal()))
@@ -519,6 +520,88 @@ def test_duration_cdf_survival_and_ongoing_conditioning():
     assert abs(model.ongoing_duration_cdf(14, 4) - 1.0) < 1e-9
 
 
+# --- late-user headline: multimodal start distributions ---------------------------------
+
+
+def test_mode_components_split_and_merge():
+    def bump(c, w, n):
+        return [2.718281828 ** (-0.5 * ((i - c) / w) ** 2) for i in range(n)]
+
+    two = [
+        a + b
+        for a, b in zip(
+            bump(5, 1.5, 60), [0.6 * v for v in bump(40, 1.5, 60)], strict=True
+        )
+    ]
+    t = sum(two)
+    two = [v / t for v in two]
+    comps = mode_components(two)
+    assert len(comps) == 2 and is_multimodal(two)
+    assert 0.55 < comps[0][2] < 0.7 and comps[0][1] < comps[1][0]
+    one = bump(10, 3, 60)
+    t = sum(one)
+    assert not is_multimodal([v / t for v in one])
+    tiny = [
+        a + 0.02 * b for a, b in zip(bump(5, 1.5, 60), bump(40, 1.5, 60), strict=True)
+    ]
+    t = sum(tiny)
+    assert not is_multimodal([v / t for v in tiny])  # second bump < 12% mass
+
+
+def test_late_regular_user_headline_stays_near_term():
+    """10/20/40 days late: never headline a forgotten-log spike 5-8 weeks away."""
+    periods = make_periods(D(2023, 1, 1), [28] * 8)
+    last = periods[-1][0]
+    for late in (10, 20, 40):
+        today = last + TD(days=28 + late)
+        fc = ForecastService.fit(periods, today).forecast()
+        ahead = (fc["most_likely_start"] - today).days
+        assert 0 <= ahead <= 12, (late, ahead)
+        for iv in ("interval_50", "interval_80"):
+            assert fc[iv]["start"] >= today
+            assert fc[iv]["start"] <= fc["most_likely_start"] <= fc[iv]["end"]
+        assert fc["confidence"] != "regular"
+    # the 10-days-late case is bimodal: the other mode is reported, with its mass
+    fc10 = ForecastService.fit(periods, last + TD(days=38)).forecast()
+    sw = fc10["secondary_window"]
+    assert sw is not None and sw["probability"] >= 0.12
+    assert sw["start"] > fc10["most_likely_start"]
+
+
+def test_on_time_user_has_no_secondary_window():
+    periods = make_periods(D(2023, 1, 1), [28] * 8)
+    fc = ForecastService.fit(periods, periods[-1][0] + TD(days=20)).forecast()
+    assert fc["secondary_window"] is None
+
+
+def test_late_habitual_skipper_headlines_the_skip_not_an_imminent_start():
+    periods = make_periods(D(2023, 1, 1), [28, 28, 56, 28, 57, 28, 28, 56, 28])
+    last = periods[-1][0]
+    today = last + TD(days=38)  # 10 days late for a user who often forgets logs
+    model = ForecastService.fit(periods, today)
+    assert model.has_excluded and model.pi_skip > 0.1
+    fc = model.forecast()
+    ahead = (fc["most_likely_start"] - today).days
+    assert 8 <= ahead <= 30  # around the two-cycle date, not tomorrow
+    assert fc["probability_next_3_days"] < 0.1
+    assert (
+        fc["interval_80"]["start"]
+        <= fc["most_likely_start"]
+        <= fc["interval_80"]["end"]
+    )
+    assert abs(sum(model.next_start_pmf()) - 1) < 1e-9
+
+
+def test_three_merged_cycles_get_some_weight_for_habitual_skippers():
+    periods = make_periods(D(2023, 1, 1), [28, 56, 28, 57, 28, 56, 28, 28, 56, 28])
+    model = ForecastService.fit(periods, periods[-1][0] + TD(days=1))
+    pmf = model.next_start_pmf()
+    triple = sum(pmf[80 - 15 :])
+    assert triple > 0.005
+    groups = model.start_intensities(200)
+    assert len(groups) >= 4
+
+
 # --- backtest gate (the measurable bar) -----------------------------------------------------
 
 
@@ -534,10 +617,19 @@ def _run(scenario, seed, n=EVAL_USERS):
     return buckets
 
 
-def test_backtest_gate_native():
-    """Every shown-label x day and has-excluded-gaps x day bucket is calibrated
-    (|cov - p| <= 0.05 + 2 SE) and not worse than naive. Evaluation seeds are never
-    used by scripts/calibrate_forecast.py."""
+def test_backtest_regression_guard_native():
+    """REGRESSION GUARD, not the strict calibration gate.
+
+    Tolerance is |cov - p| <= 0.10 + 2 SE per shown-label x day and has-excluded-gaps x
+    day bucket, with 600 users per seed (buckets of 200-5000 forecasts). The strict
+    gate (0.05 + 2 SE, 1500 users, seeds 5/42/123; run
+    ``python -m scripts.backtest_forecast 1500 all 5 42 123``) is NOT met on native
+    and skips: native 50% intervals over-cover by up to ~0.06 (cov50 ~0.56), and
+    habitual skippers' late forecasts (excluded @ day 32) sit at cov80 ~0.75-0.77 on
+    the skips scenario. regime and lognormal_drift_skips pass the strict gate.
+    Evaluation seeds are never used by scripts/calibrate_forecast.py. The model's MAE
+    (median point) must also not exceed the naive mean by more than 0.1 day + 2 SE.
+    """
     per_seed = [_run("native", seed) for seed in EVAL_SEEDS]
     for seed, buckets in zip(EVAL_SEEDS, per_seed, strict=True):
         fails = gate_failures(buckets, slack=REGRESSION_SLACK)
@@ -550,21 +642,21 @@ def test_backtest_gate_native():
     assert all_day["mae_model"] < all_day["mae_naive_buggy"]
 
 
-def test_backtest_gate_skips_scenario():
+def test_backtest_regression_guard_skips():
     """30% of users skip 25% of their logs, with log-normal noise."""
     buckets = _run("skips", 42)
     fails = gate_failures(buckets, slack=REGRESSION_SLACK)
     assert not fails, "; ".join(fails)
 
 
-def test_backtest_gate_regime_scenario():
+def test_backtest_regression_guard_regime():
     """30% of users change their mean and double their SD part-way through."""
     buckets = _run("regime", 5)
     fails = gate_failures(buckets, slack=REGRESSION_SLACK)
     assert not fails, "; ".join(fails)
 
 
-def test_backtest_stress_lognormal_drift_skips():
+def test_backtest_regression_guard_stress():
     """Hardest world (log-normal, strong drift, 20% skippers, 6% long cycles).
 
     Reported, not calibrated: the 80% interval must still cover at least 70%.

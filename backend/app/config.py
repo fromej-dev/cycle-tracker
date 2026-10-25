@@ -66,7 +66,8 @@ class TestingConfig(Config):
 
     TESTING = True
     SQLALCHEMY_DATABASE_URI = (
-        f"sqlite:///{Config.INSTANCE_FOLDER_PATH / 'test.db'}"  # Use a separate test DB
+        # Separate test DB per process so parallel test runs don't collide
+        f"sqlite:///{Config.INSTANCE_FOLDER_PATH / f'test-{os.getpid()}.db'}"
     )
     JWT_SECRET_KEY = "test-jwt-secret"
     SECRET_KEY = "test-secret-key"

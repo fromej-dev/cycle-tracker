@@ -71,3 +71,36 @@ export const feedApi = {
   update: (b: Partial<CalendarFeed>) => apiClient.patch<CalendarFeed>('/users/me/calendar-feed', b),
   revoke: () => apiClient.delete('/users/me/calendar-feed'),
 };
+
+export interface PartnerShare { enabled: boolean; name: string; scope: { fertile: boolean; window_days: number } }
+export interface HomeAssistant { enabled: boolean; include_fertile: boolean }
+export interface Webhook { id: number; url: string; events: string[]; active: boolean; last_status: number | null; last_attempt_at: string | null; failures: number; secret?: string }
+export const WEBHOOK_EVENTS = ['period_started', 'period_ended', 'period_expected_soon', 'fertile_window_starting'] as const;
+type Created = { path: string; url: string | null };
+
+export const partnerApi = {
+  get: () => apiClient.get<PartnerShare>('/users/me/partner-share'),
+  create: (b: { name: string; scope: { fertile: boolean; window_days: number } }) => apiClient.post<Created>('/users/me/partner-share', b),
+  update: (b: Partial<{ name: string; scope: { fertile: boolean; window_days: number } }>) => apiClient.patch<PartnerShare>('/users/me/partner-share', b),
+  revoke: () => apiClient.delete('/users/me/partner-share'),
+};
+
+export const haApi = {
+  get: () => apiClient.get<HomeAssistant>('/users/me/home-assistant'),
+  create: (include_fertile: boolean) => apiClient.post<Created>('/users/me/home-assistant', { include_fertile }),
+  update: (include_fertile: boolean) => apiClient.patch<HomeAssistant>('/users/me/home-assistant', { include_fertile }),
+  revoke: () => apiClient.delete('/users/me/home-assistant'),
+};
+
+export const webhookApi = {
+  list: () => apiClient.get<Webhook[]>('/users/me/webhooks'),
+  create: (b: { url: string; events: string[] }) => apiClient.post<Webhook>('/users/me/webhooks', b),
+  update: (id: number, b: Partial<Pick<Webhook, 'url' | 'events' | 'active'>>) => apiClient.patch<Webhook>(`/users/me/webhooks/${id}`, b),
+  remove: (id: number) => apiClient.delete(`/users/me/webhooks/${id}`),
+  test: (id: number) => apiClient.post<{ delivered: boolean; status: number; error: string | null }>(`/users/me/webhooks/${id}/test`),
+  rotate: (id: number) => apiClient.post<Webhook>(`/users/me/webhooks/${id}/rotate-secret`),
+};
+
+export const doctorApi = {
+  html: (months: number) => apiClient.get<string>('/reports/doctor', { params: { months, today: localToday() }, responseType: 'text', transformResponse: (d) => d }),
+};

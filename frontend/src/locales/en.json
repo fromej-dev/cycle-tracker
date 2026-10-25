@@ -532,5 +532,98 @@
     "preview": "Looks like:",
     "estimateTag": "(estimate)",
     "syncing": "Your link is active. For safety it is only shown once; reset it to get a new one."
+  },
+  "doctor": {
+    "title": "Report for your doctor",
+    "intro": "A clear, printable summary of your cycles, periods and symptoms to bring to an appointment.",
+    "range": "Period covered",
+    "months": "Last {n} months",
+    "open": "Open printable report",
+    "note": "This is an overview of what you logged, not a diagnosis. It stays on your device until you choose to print or share it.",
+    "error": "Could not create the report. Please try again."
+  },
+  "partner": {
+    "title": "Share a heads-up with a partner",
+    "intro": "Give someone a private link that tells them when a period is coming, so they can be kind and prepared.",
+    "private": "They only see whether a period is coming soon or now. Never your history, dates, symptoms or notes.",
+    "name": "Name shown to them",
+    "namePlaceholder": "Me",
+    "nameHelp": "Shown at the top of their page.",
+    "window": "Heads-up window (days)",
+    "windowHelp": "Say 'period likely soon' this many days ahead (2 to 14).",
+    "fertile": "Also show a fertile hint",
+    "fertileHelp": "Off by default. Adds a coarse fertile-window hint.",
+    "create": "Create link",
+    "urlTitle": "Your partner link",
+    "urlOnce": "Copy it now and send it to them. For safety it is only shown once.",
+    "active": "The link is active. For safety it is only shown once; reset it to get a new one.",
+    "saved": "Saved",
+    "off": "Sharing stopped",
+    "rotate": "Reset link",
+    "turnOff": "Stop sharing",
+    "rotateTitle": "Reset the partner link?",
+    "rotateMessage": "The old link stops working right away. You will get a new one to send.",
+    "rotateConfirm": "Reset link",
+    "offTitle": "Stop sharing?",
+    "offMessage": "The link stops working immediately. You can create a new one later.",
+    "errors": {
+      "generic": "Something went wrong. Please try again."
+    }
+  },
+  "auto": {
+    "title": "Smart home & automations",
+    "intro": "For advanced users: Home Assistant and webhooks.",
+    "private": "These links and secrets give access to your cycle status. Keep them private.",
+    "saved": "Saved",
+    "errors": {
+      "generic": "Something went wrong. Please try again."
+    },
+    "events": {
+      "period_started": "Period started",
+      "period_ended": "Period ended",
+      "period_expected_soon": "Period expected soon",
+      "fertile_window_starting": "Fertile window starting"
+    },
+    "ha": {
+      "title": "Home Assistant sensor",
+      "intro": "A private link a Home Assistant sensor can read.",
+      "guide": "See the Home Assistant guide in the project docs.",
+      "fertile": "Include fertile window",
+      "fertileHelp": "Off by default.",
+      "create": "Create sensor link",
+      "urlTitle": "Your sensor link",
+      "urlOnce": "Copy it now. For safety it is only shown once.",
+      "active": "Your sensor link is active. It is only shown once; reset it to get a new one.",
+      "rotate": "Reset link",
+      "turnOff": "Turn off",
+      "rotateTitle": "Reset the sensor link?",
+      "rotateMessage": "The old link stops working. Update your Home Assistant configuration with the new one.",
+      "offTitle": "Turn off the sensor link?",
+      "offMessage": "The link stops working immediately.",
+      "off": "Sensor link turned off"
+    },
+    "hooks": {
+      "title": "Webhooks",
+      "intro": "Get a signed message at your own URL when something happens. Up to 5.",
+      "url": "Webhook URL",
+      "events": "Send me",
+      "optIn": "(opt-in)",
+      "add": "Add webhook",
+      "secretTitle": "Signing secret",
+      "secretOnce": "Use it to verify messages. For safety it is only shown once.",
+      "test": "Send test",
+      "testOk": "Delivered (HTTP {status}).",
+      "testFail": "Not delivered (HTTP {status}).",
+      "pause": "Pause",
+      "resume": "Resume",
+      "paused": "Paused",
+      "rotate": "New secret",
+      "delete": "Delete",
+      "deleteTitle": "Delete this webhook?",
+      "deleteMessage": "It stops receiving messages right away.",
+      "rotateTitle": "Create a new secret?",
+      "rotateMessage": "The old secret stops being valid. Update your receiver.",
+      "privateHint": "Home-network URLs need ALLOW_PRIVATE_WEBHOOKS=1 on the server."
+    }
   }
 }

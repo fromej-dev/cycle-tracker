@@ -102,6 +102,9 @@
       </section>
 
       <CalendarFeedCard />
+      <PartnerShareCard />
+      <DoctorReportCard />
+      <AutomationsCard />
 
       <section aria-labelledby="change-password-heading" class="card p-6">
         <h3 id="change-password-heading" class="section-title mb-4">
@@ -199,6 +202,9 @@ import { useAuthStore } from '@/stores/auth';
 import { useRouter } from 'vue-router';
 import ConfirmationModal from "@/components/ConfirmationModal.vue";
 import CalendarFeedCard from '@/components/CalendarFeedCard.vue';
+import PartnerShareCard from '@/components/PartnerShareCard.vue';
+import DoctorReportCard from '@/components/DoctorReportCard.vue';
+import AutomationsCard from '@/components/AutomationsCard.vue';
 import LanguagePicker from "@/components/LanguagePicker.vue";
 import UserApi from '@/api/users.ts';
 import { CheckIcon, CheckCircleIcon, XMarkIcon, PencilSquareIcon, SunIcon, MoonIcon } from '@heroicons/vue/24/outline';

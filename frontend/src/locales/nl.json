@@ -532,5 +532,98 @@
     "preview": "Ziet eruit als:",
     "estimateTag": "(schatting)",
     "syncing": "Je link is actief. Voor de veiligheid zie je hem maar één keer; reset hem om een nieuwe te krijgen."
+  },
+  "doctor": {
+    "title": "Rapport voor je arts",
+    "intro": "Een duidelijk, afdrukbaar overzicht van je cycli, menstruaties en klachten om mee te nemen naar een afspraak.",
+    "range": "Periode",
+    "months": "Laatste {n} maanden",
+    "open": "Afdrukbaar rapport openen",
+    "note": "Dit is een overzicht van wat je hebt bijgehouden, geen diagnose. Het blijft op je apparaat tot je het zelf afdrukt of deelt.",
+    "error": "Het rapport kon niet worden gemaakt. Probeer het opnieuw."
+  },
+  "partner": {
+    "title": "Deel een seintje met je partner",
+    "intro": "Geef iemand een privélink die laat zien wanneer je menstruatie eraan komt, zodat diegene er rekening mee kan houden.",
+    "private": "Ze zien alleen of je menstruatie binnenkort komt of nu bezig is. Nooit je geschiedenis, data, klachten of notities.",
+    "name": "Naam die zij zien",
+    "namePlaceholder": "Ik",
+    "nameHelp": "Bovenaan hun pagina getoond.",
+    "window": "Vooruitblik (dagen)",
+    "windowHelp": "Toon 'menstruatie waarschijnlijk binnenkort' zoveel dagen vooruit (2 tot 14).",
+    "fertile": "Toon ook een vruchtbaarheidshint",
+    "fertileHelp": "Standaard uit. Voegt een grove hint over het vruchtbare venster toe.",
+    "create": "Link maken",
+    "urlTitle": "Je partnerlink",
+    "urlOnce": "Kopieer hem nu en stuur hem door. Uit veiligheid wordt hij maar één keer getoond.",
+    "active": "De link is actief. Uit veiligheid wordt hij maar één keer getoond; reset hem voor een nieuwe.",
+    "saved": "Opgeslagen",
+    "off": "Delen gestopt",
+    "rotate": "Link resetten",
+    "turnOff": "Stop met delen",
+    "rotateTitle": "Partnerlink resetten?",
+    "rotateMessage": "De oude link werkt meteen niet meer. Je krijgt een nieuwe om door te sturen.",
+    "rotateConfirm": "Link resetten",
+    "offTitle": "Stoppen met delen?",
+    "offMessage": "De link werkt direct niet meer. Je kunt later een nieuwe maken.",
+    "errors": {
+      "generic": "Er ging iets mis. Probeer het opnieuw."
+    }
+  },
+  "auto": {
+    "title": "Slim huis & automatisering",
+    "intro": "Voor gevorderde gebruikers: Home Assistant en webhooks.",
+    "private": "Deze links en geheimen geven toegang tot je cyclusstatus. Houd ze privé.",
+    "saved": "Opgeslagen",
+    "errors": {
+      "generic": "Er ging iets mis. Probeer het opnieuw."
+    },
+    "events": {
+      "period_started": "Menstruatie begonnen",
+      "period_ended": "Menstruatie afgelopen",
+      "period_expected_soon": "Menstruatie binnenkort verwacht",
+      "fertile_window_starting": "Vruchtbaar venster begint"
+    },
+    "ha": {
+      "title": "Home Assistant-sensor",
+      "intro": "Een privélink die een Home Assistant-sensor kan uitlezen.",
+      "guide": "Zie de Home Assistant-handleiding in de projectdocumentatie.",
+      "fertile": "Vruchtbaar venster meenemen",
+      "fertileHelp": "Standaard uit.",
+      "create": "Sensorlink maken",
+      "urlTitle": "Je sensorlink",
+      "urlOnce": "Kopieer hem nu. Uit veiligheid wordt hij maar één keer getoond.",
+      "active": "Je sensorlink is actief. Hij wordt maar één keer getoond; reset hem voor een nieuwe.",
+      "rotate": "Link resetten",
+      "turnOff": "Uitzetten",
+      "rotateTitle": "Sensorlink resetten?",
+      "rotateMessage": "De oude link werkt niet meer. Werk je Home Assistant-configuratie bij met de nieuwe.",
+      "offTitle": "Sensorlink uitzetten?",
+      "offMessage": "De link werkt direct niet meer.",
+      "off": "Sensorlink uitgezet"
+    },
+    "hooks": {
+      "title": "Webhooks",
+      "intro": "Ontvang een ondertekend bericht op je eigen URL als er iets gebeurt. Maximaal 5.",
+      "url": "Webhook-URL",
+      "events": "Stuur mij",
+      "optIn": "(optioneel)",
+      "add": "Webhook toevoegen",
+      "secretTitle": "Ondertekeningsgeheim",
+      "secretOnce": "Gebruik het om berichten te verifiëren. Uit veiligheid wordt het maar één keer getoond.",
+      "test": "Test sturen",
+      "testOk": "Afgeleverd (HTTP {status}).",
+      "testFail": "Niet afgeleverd (HTTP {status}).",
+      "pause": "Pauzeren",
+      "resume": "Hervatten",
+      "paused": "Gepauzeerd",
+      "rotate": "Nieuw geheim",
+      "delete": "Verwijderen",
+      "deleteTitle": "Deze webhook verwijderen?",
+      "deleteMessage": "Hij ontvangt direct geen berichten meer.",
+      "rotateTitle": "Nieuw geheim maken?",
+      "rotateMessage": "Het oude geheim is niet meer geldig. Werk je ontvanger bij.",
+      "privateHint": "URL's op je thuisnetwerk vereisen ALLOW_PRIVATE_WEBHOOKS=1 op de server."
+    }
   }
 }

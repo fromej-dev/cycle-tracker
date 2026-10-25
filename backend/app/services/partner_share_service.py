@@ -5,6 +5,15 @@ SHA-256 is stored, it is shown once, and rotating/revoking makes the old link 40
 once. The page shows ONE coarse sentence ("Period likely starts in about 3-7 days").
 It never contains a date, a past period, a cycle length, symptoms or an exact
 probability, and fertile info only if the owner explicitly enabled ``fertile``.
+While a period is ongoing, and when nothing is expected, the page says the neutral
+"Nothing to share right now" (true in both cases); "Period now" appears only if the
+owner enabled ``show_current``.
+
+Limits (see headsup_service for details): someone who polls the link daily sees a
+time series. Bucket thresholds are shifted by a stable per-link 0-2 days and buckets
+only move away with hysteresis, but the day "soon" appears or disappears still tells
+roughly when the next period is due and when the last one began (to within a day or
+so). With ``show_current`` the start and end of every period are visible exactly.
 The page is titled with the owner-chosen name (default "Shared calendar"), never the
 app's name, and is served noindex / no-store / no-referrer.
 """
@@ -28,6 +37,7 @@ DEFAULT_NAME = "Shared calendar"
 DEFAULT_WINDOW = 7
 MIN_WINDOW, MAX_WINDOW = 2, 14
 
+NOTHING_TEXT = "Nothing to share right now"
 _SOON_TEXT = {
     "0-2": "Period likely starts within the next couple of days",
     "3-7": "Period likely starts in about 3–7 days",
@@ -51,6 +61,7 @@ class PartnerShareService:
             "name": user.partner_share_name or DEFAULT_NAME,
             "scope": {
                 "fertile": bool(user.partner_share_fertile),
+                "show_current": bool(user.partner_share_show_current),
                 "window_days": user.partner_share_window_days or DEFAULT_WINDOW,
             },
         }
@@ -63,6 +74,8 @@ class PartnerShareService:
         if scope:
             if "fertile" in scope:
                 changes["partner_share_fertile"] = bool(scope["fertile"])
+            if "show_current" in scope:
+                changes["partner_share_show_current"] = bool(scope["show_current"])
             if "window_days" in scope:
                 changes["partner_share_window_days"] = int(scope["window_days"])
         if changes:
@@ -90,16 +103,21 @@ class PartnerShareService:
         """The complete, scope-limited content of the page and its JSON."""
         scope = PartnerShareService.settings(user)["scope"]
         hu = HeadsUpService.compute(
-            user, scope["window_days"], scope["fertile"], today=today
+            user,
+            scope["window_days"],
+            scope["fertile"],
+            today=today,
+            link_key=user.partner_share_token_hash,
+            slot="share",
         )
-        if hu["state"] == STATE_PERIOD:
+        if hu["state"] == STATE_PERIOD and scope["show_current"]:
             status, message, bucket = "period", "Period now", None
         elif hu["state"] == STATE_SOON:
             status = "soon"
             bucket = hu["days_bucket"]
             message = _SOON_TEXT.get(bucket, _SOON_TEXT["3-7"])
         else:
-            status, message, bucket = "none", "No period expected soon", None
+            status, message, bucket = "none", NOTHING_TEXT, None
         out = {
             "name": user.partner_share_name or DEFAULT_NAME,
             "status": status,

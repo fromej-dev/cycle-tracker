@@ -44,7 +44,7 @@ def test_create_returns_path_once_and_settings_hide_token(auth_client, test_user
     assert s == {
         "enabled": True,
         "name": "Shared calendar",
-        "scope": {"fertile": False, "window_days": 7},
+        "scope": {"fertile": False, "show_current": False, "window_days": 7},
     }
     assert token not in json.dumps(s)
 
@@ -68,11 +68,78 @@ def test_states(auth_client, test_user, client):
     assert "Period likely starts" in j["message"]
 
 
-def test_period_now(auth_client, test_user, client):
+def test_period_now_is_opt_in(auth_client, test_user, client):
     add(test_user, 1, ongoing=True)
     _, token = enable(auth_client)
     j = page(client, token, ".json").get_json()
+    assert j["status"] == "none" and j["message"] == "Nothing to share right now"
+    assert "Period now" not in page(client, token).get_data(as_text=True)
+    auth_client.patch(
+        url_for("integrations.update_partner_share"),
+        json={"scope": {"show_current": True}},
+    )
+    j = page(client, token, ".json").get_json()
     assert j["status"] == "period" and j["message"] == "Period now"
+    auth_client.patch(
+        url_for("integrations.update_partner_share"),
+        json={"scope": {"show_current": False}},
+    )
+    assert page(client, token, ".json").get_json()["status"] == "none"
+
+
+def test_neutral_text_is_true_in_both_states(auth_client, test_user, client):
+    add(test_user, 5)
+    _, token = enable(auth_client)
+    none_msg = page(client, token, ".json").get_json()["message"]
+    Period.query.delete()
+    add(test_user, 1, ongoing=True)
+    assert page(client, token, ".json").get_json()["message"] == none_msg
+    assert "expected" not in none_msg.lower() and "no period" not in none_msg.lower()
+
+
+def test_jitter_is_stable_per_link_and_bounded():
+    keys = [f"k{i}" for i in range(60)]
+    offs = {k: headsup_service.jitter_for(k) for k in keys}
+    assert set(offs.values()) == {0, 1, 2}
+    assert all(offs[k] == headsup_service.jitter_for(k) for k in keys)
+    assert headsup_service.jitter_for(None) == 0
+
+
+def test_bucket_thresholds_shift_with_jitter():
+    b = headsup_service.bucket_for
+    assert [b(d) for d in (2, 3, 7, 8, 14, 15)] == [
+        "0-2", "3-7", "3-7", "8-14", "8-14", "15+",
+    ]  # fmt: skip
+    assert b(3, 1) == "0-2" and b(4, 1) == "3-7"
+    assert b(9, 2) == "3-7" and b(10, 2) == "8-14" and b(16, 2) == "8-14"
+    assert b(17, 2) == "15+"
+
+
+def test_hysteresis_only_moves_away_with_margin():
+    idx = headsup_service.bucket_index
+    # forecast drifts from 7 to 8 days: raw bucket changes, hysteresis holds "3-7"
+    prev = idx(7)
+    raw = idx(8)
+    assert raw > prev
+    assert max(prev, idx(8 - headsup_service.HYSTERESIS)) == prev
+    assert max(prev, idx(9 - headsup_service.HYSTERESIS)) > prev
+
+
+def test_hysteresis_in_page(auth_client, test_user, client, db):
+    add(test_user, 26)  # about 2 days to go
+    _, token = enable(auth_client)
+    first = page(client, token, ".json").get_json()["days_bucket"]
+    db.session.refresh(test_user)
+    assert json.loads(test_user.heads_up_state)["share"] == first
+    # remembered bucket is closer than any raw bucket will be: moving out needs margin
+    test_user.update(heads_up_state=json.dumps({"share": "0-2"}))
+    assert page(client, token, ".json").get_json()["days_bucket"] in ("0-2", "3-7")
+    # period starts: memory is cleared
+    Period.query.delete()
+    add(test_user, 1, ongoing=True)
+    page(client, token, ".json")
+    db.session.refresh(test_user)
+    assert "share" not in json.loads(test_user.heads_up_state or "{}")
 
 
 def test_none_state(auth_client, test_user, client):
@@ -80,6 +147,7 @@ def test_none_state(auth_client, test_user, client):
     _, token = enable(auth_client)
     j = page(client, token, ".json").get_json()
     assert j["status"] == "none" and j["days_bucket"] is None
+    assert j["message"] == "Nothing to share right now"
 
 
 def test_no_data_user(auth_client, client):

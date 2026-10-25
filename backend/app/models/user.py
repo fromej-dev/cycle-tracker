@@ -45,6 +45,13 @@ class User(BaseModel):
         db.Integer, nullable=False, default=7, server_default="7"
     )
 
+    # Opt-in: show "Period now" on the partner page (off: neutral text instead).
+    partner_share_show_current = db.Column(
+        db.Boolean, nullable=False, default=False, server_default=db.false()
+    )
+    # JSON {"share": bucket, "ha": bucket}: last coarse bucket shown, for hysteresis.
+    heads_up_state = db.Column(db.Text)
+
     # Home Assistant state endpoint (/ha/<token>/state); hash only.
     ha_token_hash = db.Column(db.String(64), unique=True, index=True)
     ha_include_fertile = db.Column(

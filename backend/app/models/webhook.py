@@ -22,5 +22,7 @@ class Webhook(BaseModel):
     failures = db.Column(
         db.Integer, nullable=False, default=0, server_default="0"
     )  # consecutive failed deliveries
+    # Why the hook was switched off automatically (None when active or switched off by hand)
+    disabled_reason = db.Column(db.String(200))
 
     user = db.relationship("User", back_populates="webhooks")

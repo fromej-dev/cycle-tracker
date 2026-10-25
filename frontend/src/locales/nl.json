@@ -551,6 +551,8 @@
     "nameHelp": "Bovenaan hun pagina getoond.",
     "window": "Vooruitblik (dagen)",
     "windowHelp": "Toon 'menstruatie waarschijnlijk binnenkort' zoveel dagen vooruit (2 tot 14).",
+    "showCurrent": "Laat zien wanneer je menstruatie bezig is",
+    "showCurrentHelp": "Standaard uit. Als dit aan staat, ziet je partner \"Nu menstruatie\", waardoor na verloop van tijd je precieze menstruatiedata zichtbaar worden.",
     "fertile": "Toon ook een vruchtbaarheidshint",
     "fertileHelp": "Standaard uit. Voegt een grove hint over het vruchtbare venster toe.",
     "create": "Link maken",

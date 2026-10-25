@@ -217,5 +217,5 @@ def rotate_webhook_secret(hook_id: int):
 @integrations_bp.doc(security="bearerAuth")
 @jwt_required()
 def test_webhook(hook_id: int):
-    """Send a signed `test` event now (single attempt, 2 s timeout)."""
+    """Send a signed `test` event now (single attempt, 5 s hard deadline)."""
     return WebhookService.send_test(_own_hook(hook_id))

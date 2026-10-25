@@ -7,7 +7,10 @@ threshold and what was observed, nothing more.
 Reference ranges (stated in the report itself): FIGO normal menstrual-cycle limits
 for frequency (24-38 days), regularity (shortest to longest cycle differs by up to
 7-9 days, depending on age) and period duration (up to 8 days); cycles outside
-21-35 days and a >=7 day spread are widely used practical markers.
+21-35 days are a widely used practical marker. The variability flag fires only when
+the spread is strictly beyond the lower FIGO limit (8 days or more). Regularity is
+judged over the last 12 months of cycles (all logged cycles if fewer than two fall in
+that window) and the report says which window was used.
 """
 
 from __future__ import annotations
@@ -22,7 +25,8 @@ from app.services.forecast_service import MAX_CYCLE, MISSED_LOG_RATIO, ForecastS
 REF_LOW, REF_HIGH = 21, 35  # reference band used for the flag and the chart
 FIGO_FREQ = (24, 38)
 FIGO_DURATION_MAX = 8
-VARIABILITY_FLAG = 7  # days (max - min) at which the flag appears
+VARIABILITY_FLAG = 8  # days (max - min) at which the flag appears (> FIGO's 7)
+REGULARITY_MONTHS = 12
 VARIABILITY_UPPER = 9  # upper end of the FIGO age-dependent limit
 LAST_N = 6
 OUT_OF_RANGE_MIN = 2  # flag if at least this many of the last LAST_N are outside
@@ -74,10 +78,9 @@ class DoctorReportService:
             else (statistics.median(gaps) if gaps else None)
         )
 
-        cycles = []  # every logged period in range, with the cycle that follows it
-        excluded = []
+        entries = []  # every logged period, with the cycle that follows it
         for i, (start, end) in enumerate(rows):
-            if start < since or start > today:
+            if start > today:
                 continue
             length = (end - start).days + 1 if end else None
             if end and not 1 <= length <= 60:
@@ -89,21 +92,46 @@ class DoctorReportService:
                 and ref is not None
                 and (cl >= MISSED_LOG_RATIO * ref or cl > MAX_CYCLE)
             )
-            entry = {
-                "start": start,
-                "end": end,
-                "period_days": length,
-                "cycle_days": cl,
-                "excluded": is_missed,
-                "ongoing": end is None and (today - start).days < 14,
-            }
-            cycles.append(entry)
-            if is_missed:
-                excluded.append({"start": start, "next_start": nxt, "gap_days": cl})
+            entries.append(
+                {
+                    "start": start,
+                    "end": end,
+                    "period_days": length,
+                    "cycle_days": cl,
+                    "excluded": is_missed,
+                    "ongoing": end is None and (today - start).days < 14,
+                    "next_start": nxt,
+                }
+            )
+        cycles = []  # the ones inside the report range
+        excluded = []
+        for c in entries:
+            if c["start"] < since:
+                continue
+            nxt = c.pop("next_start")
+            cycles.append(c)
+            if c["excluded"]:
+                excluded.append(
+                    {
+                        "start": c["start"],
+                        "next_start": nxt,
+                        "gap_days": c["cycle_days"],
+                    }
+                )
+        for c in entries:
+            c.pop("next_start", None)
 
         used = [
             c["cycle_days"] for c in cycles if c["cycle_days"] and not c["excluded"]
         ]
+        # Regularity: last 12 months of cycles when there are enough, else everything.
+        reg_since = today - datetime.timedelta(days=round(REGULARITY_MONTHS * 30.4375))
+        usable = [c for c in entries if c["cycle_days"] and not c["excluded"]]
+        recent = [c["cycle_days"] for c in usable if c["start"] >= reg_since]
+        if len(recent) >= 2:
+            reg, window = recent, f"the last {REGULARITY_MONTHS} months"
+        else:
+            reg, window = [c["cycle_days"] for c in usable], "all logged cycles"
         plen = [c["period_days"] for c in cycles if c["period_days"]]
         last = used[-LAST_N:]
         stats = {
@@ -113,11 +141,12 @@ class DoctorReportService:
             "min_cycle_days": min(used) if used else None,
             "max_cycle_days": max(used) if used else None,
             "sd_cycle_days": _round(statistics.stdev(used)) if len(used) > 1 else None,
-            "variability_days": (max(last) - min(last)) if len(last) >= 2 else None,
-            "variability_cycles": len(last),
+            "variability_days": (max(reg) - min(reg)) if len(reg) >= 2 else None,
+            "variability_cycles": len(reg),
+            "variability_window": window,
             "max_consecutive_change_days": (
-                max(abs(b - a) for a, b in zip(last, last[1:], strict=False))
-                if len(last) >= 2
+                max(abs(b - a) for a, b in zip(reg, reg[1:], strict=False))
+                if len(reg) >= 2
                 else None
             ),
             "median_period_days": _round(statistics.median(plen)) if plen else None,
@@ -164,12 +193,12 @@ class DoctorReportService:
             flags.append(
                 {
                     "code": "cycle_variability",
-                    "threshold": f"difference between the longest and shortest of the "
-                    f"last {LAST_N} cycles of {VARIABILITY_FLAG} days or more (a "
-                    f"commonly used marker for irregular cycles; FIGO normal "
-                    f"variation is up to 7-9 days depending on age)",
-                    "observed": f"{var} days over the last {stats['variability_cycles']}"
-                    f" cycles"
+                    "threshold": f"difference between the longest and shortest cycle over "
+                    f"{stats['variability_window']} of {VARIABILITY_FLAG} days or more, "
+                    f"i.e. more than 7 days (FIGO normal variation is up to 7-9 days "
+                    f"depending on age, so only values beyond 7 are mentioned)",
+                    "observed": f"{var} days over {stats['variability_window']} "
+                    f"({stats['variability_cycles']} cycles)"
                     + (
                         f", above the {VARIABILITY_UPPER}-day upper limit"
                         if var > VARIABILITY_UPPER
@@ -356,7 +385,6 @@ text-align:left}}th{{background:#f0f0f0}}
 .stats div{{border:1px solid #bbb;padding:6px 8px}}.stats b{{display:block;font-size:18px}}
 .small{{font-size:12px;color:#444}}.disclaimer{{border:2px solid #111;padding:8px 10px;
 margin-top:20px}}li{{margin-bottom:6px}}
-.noprint button{{font:inherit;padding:6px 12px}}
 @page{{margin:14mm}}
 @media print{{body{{max-width:none;padding:0;font-size:11pt}}.noprint{{display:none}}
 h2,table,svg,.disclaimer{{break-inside:avoid}}tr{{break-inside:avoid}}}}
@@ -364,7 +392,7 @@ h2,table,svg,.disclaimer{{break-inside:avoid}}tr{{break-inside:avoid}}}}
 <h1>Cycle summary{who}</h1>
 <p class="small">Period covered: {rng["from"].isoformat()} to {rng["to"].isoformat()}
 ({rng["months"]} months) &middot; Generated {data["generated"].isoformat()}</p>
-<p class="noprint"><button onclick="window.print()">Print</button></p>
+<p class="noprint small">To print or save as PDF, use your browser's Print function.</p>
 <h2>Summary</h2>
 <div class="stats">
 <div>Cycles counted<b>{v(s["cycles_counted"])}</b></div>
@@ -372,7 +400,7 @@ h2,table,svg,.disclaimer{{break-inside:avoid}}tr{{break-inside:avoid}}}}
 <div>Mean cycle<b>{v(s["mean_cycle_days"], " d")}</b></div>
 <div>Range<b>{v(s["min_cycle_days"])}&ndash;{v(s["max_cycle_days"])} d</b></div>
 <div>Standard deviation<b>{v(s["sd_cycle_days"], " d")}</b></div>
-<div>Variability (last {s["variability_cycles"]} cycles)<b>{v(s["variability_days"], " d")}</b></div>
+<div>Variability ({e(s["variability_window"])}, {s["variability_cycles"]} cycles)<b>{v(s["variability_days"], " d")}</b></div>
 <div>Median period length<b>{v(s["median_period_days"], " d")}</b></div>
 </div>
 <h2>Observations</h2>
@@ -380,7 +408,7 @@ h2,table,svg,.disclaimer{{break-inside:avoid}}tr{{break-inside:avoid}}}}
 <p class="small">Reference points used: cycles of {ref["band_days"][0]}&ndash;{ref["band_days"][1]} days;
 FIGO normal ranges: frequency {ref["figo_frequency_days"][0]}&ndash;{ref["figo_frequency_days"][1]} days,
 variation up to {ref["figo_variation_days"][0]}&ndash;{ref["figo_variation_days"][1]} days between the shortest and longest cycle,
-duration up to {ref["figo_duration_max_days"]} days. A spread of 7 days or more is a commonly used marker of irregular cycles.</p>
+duration up to {ref["figo_duration_max_days"]} days. Variability is flagged only when the spread is more than 7 days (8 or more), measured over {e(s["variability_window"])}.</p>
 {chart_html}
 <h2>Cycles</h2>
 <table><thead><tr><th>Period start</th><th>Period length (days)</th><th>Cycle length (days)</th></tr></thead>

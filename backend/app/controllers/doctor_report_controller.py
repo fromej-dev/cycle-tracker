@@ -41,9 +41,10 @@ def doctor_report_html(query: dict):
     resp.headers["Cache-Control"] = "no-store"
     resp.headers["Referrer-Policy"] = "no-referrer"
     resp.headers["Content-Security-Policy"] = (
-        "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; "
-        "img-src data:; base-uri 'none'; form-action 'none'"
+        "default-src 'none'; style-src 'unsafe-inline'; script-src 'none'; "
+        "img-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
     )
+    resp.headers["X-Content-Type-Options"] = "nosniff"
     return resp
 
 

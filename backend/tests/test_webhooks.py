@@ -3,6 +3,7 @@ import hashlib
 import hmac
 import json
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import pytest
@@ -412,3 +413,230 @@ def test_ha_fertile_opt_in_and_revoke(auth_client, test_user, client):
     assert client.get(path).status_code == 200
     auth_client.delete(url_for("integrations.revoke_home_assistant"))
     assert client.get(path).status_code == 404
+
+
+# --- SSRF: embedded IPv4, multicast, reserved ---------------------------------------
+
+
+def _teredo(server: str, client: str) -> str:
+    import ipaddress
+
+    c = int(ipaddress.IPv4Address(client)) ^ 0xFFFFFFFF
+    s = int(ipaddress.IPv4Address(server))
+    return str(ipaddress.IPv6Address((0x2001 << 112) | (s << 64) | (0x8000 << 48) | c))
+
+
+@pytest.mark.parametrize(
+    "ip",
+    [
+        "64:ff9b::7f00:1",  # NAT64 -> 127.0.0.1
+        "64:ff9b::a00:5",  # NAT64 -> 10.0.0.5
+        "64:ff9b::a9fe:a9fe",  # NAT64 -> 169.254.169.254
+        "64:ff9b:1::7f00:1",  # local-use NAT64 prefix
+        "::ffff:0:127.0.0.1",  # SIIT
+        "::ffff:0:a00:5",
+        "::ffff:127.0.0.1",  # mapped
+        "::127.0.0.1",  # IPv4-compatible
+        "224.0.0.1",
+        "239.255.255.250",
+        "ff02::1",
+        "ff0e::1",
+        "240.0.0.1",
+        "255.255.255.255",
+        "0.0.0.0",
+        "::",
+        "::1",
+        "fe80::1",
+        "fd00::1",
+        "2002:7f00:1::",  # 6to4 -> 127.0.0.1
+        "2002:a00:5::1",  # 6to4 -> 10.0.0.5
+        _teredo("8.8.8.8", "10.0.0.1"),  # Teredo, private client
+        _teredo("127.0.0.1", "8.8.8.8"),  # Teredo, loopback server
+    ],
+)
+def test_addr_ok_rejects(ip):
+    assert webhook_service._addr_ok(ip) is False
+
+
+@pytest.mark.parametrize("ip", ["8.8.8.8", "1.1.1.1", "2606:4700:4700::1111"])
+def test_addr_ok_accepts_public(ip):
+    assert webhook_service._addr_ok(ip) is True
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://[64:ff9b::7f00:1]/",
+        "http://[::ffff:0:127.0.0.1]/",
+        "http://[64:ff9b:1::7f00:1]/",
+        "http://[2002:7f00:1::]/",
+        "http://224.0.0.1/",
+        "http://[ff02::1]/",
+    ],
+)
+def test_ssrf_embedded_and_multicast_blocked(auth_client, monkeypatch, url):
+    monkeypatch.delenv("ALLOW_PRIVATE_WEBHOOKS", raising=False)
+    r = auth_client.post(url_for("integrations.create_webhook"), json={"url": url})
+    assert r.status_code == 422
+
+
+# --- hard deadline, pool, auto-disable ------------------------------------------------
+
+
+class Tarpit:
+    """Accepts, then trickles a never-ending response one byte at a time."""
+
+    def __init__(self, interval=0.4):
+        import socket
+
+        self.interval = interval
+        self.sock = socket.socket()
+        self.sock.bind(("127.0.0.1", 0))
+        self.sock.listen(5)
+        self.url = f"http://127.0.0.1:{self.sock.getsockname()[1]}/hook"
+        self.stop = threading.Event()
+        threading.Thread(target=self._run, daemon=True).start()
+
+    def _run(self):
+        while not self.stop.is_set():
+            try:
+                conn, _ = self.sock.accept()
+            except OSError:
+                return
+            threading.Thread(target=self._trickle, args=(conn,), daemon=True).start()
+
+    def _trickle(self, conn):
+        try:
+            conn.settimeout(1)
+            try:
+                conn.recv(65536)
+            except OSError:
+                pass
+            for ch in b"HTTP/1.1 200 OK\r\n" + b"X-A: " + b"a" * 500:
+                if self.stop.is_set():
+                    break
+                conn.sendall(bytes([ch]))
+                time.sleep(self.interval)
+        except OSError:
+            pass
+        finally:
+            conn.close()
+
+    def close(self):
+        self.stop.set()
+        self.sock.close()
+
+
+def test_tarpit_attempt_ends_within_deadline(monkeypatch):
+    monkeypatch.setenv("ALLOW_PRIVATE_WEBHOOKS", "1")
+    monkeypatch.setattr(webhook_service, "DEADLINE", 1.0)
+    # each byte arrives well inside the 2 s per-operation timeout
+    tp = Tarpit(interval=0.4)
+    try:
+        t0 = time.monotonic()
+        with pytest.raises(OSError):
+            webhook_service.post_once(tp.url, "s", {"timestamp": 1, "event": "x"})
+        assert time.monotonic() - t0 < 2.5
+    finally:
+        tp.close()
+
+
+def test_default_deadline_is_bounded():
+    assert webhook_service.DEADLINE <= 5.0
+    assert webhook_service.DEADLINE >= webhook_service.TIMEOUT
+
+
+def test_send_test_uses_deadline(auth_client, monkeypatch):
+    monkeypatch.setenv("ALLOW_PRIVATE_WEBHOOKS", "1")
+    monkeypatch.setattr(webhook_service, "DEADLINE", 1.0)
+    tp = Tarpit(interval=0.4)
+    try:
+        h = register(auth_client, tp.url)
+        t0 = time.monotonic()
+        r = auth_client.post(url_for("integrations.test_webhook", hook_id=h["id"]))
+        assert time.monotonic() - t0 < 3
+        assert r.get_json()["delivered"] is False
+    finally:
+        tp.close()
+
+
+def test_pool_is_bounded_and_drops_when_full(monkeypatch):
+    monkeypatch.setattr(webhook_service, "MAX_WORKERS", 2)
+    monkeypatch.setattr(webhook_service, "MAX_PENDING", 5)
+    pool = webhook_service.POOL
+    pool.reset()
+    gate = threading.Event()
+    lock = threading.Lock()
+    state = {"now": 0, "max": 0, "done": 0}
+
+    def job():
+        with lock:
+            state["now"] += 1
+            state["max"] = max(state["max"], state["now"])
+        gate.wait(5)
+        with lock:
+            state["now"] -= 1
+            state["done"] += 1
+
+    try:
+        accepted = [pool.submit(job) for _ in range(12)]
+        assert accepted.count(True) == 5 and accepted.count(False) == 7
+        assert pool.dropped == 7
+        gate.set()
+        deadline = time.monotonic() + 5
+        while state["done"] < 5 and time.monotonic() < deadline:
+            time.sleep(0.02)
+        assert state["done"] == 5 and state["max"] <= 2
+        time.sleep(0.1)
+        assert pool.submit(lambda: None) is True  # slots were released
+    finally:
+        gate.set()
+        pool.reset()
+
+
+def test_dispatch_uses_pool_not_threads(app, auth_client, monkeypatch):
+    monkeypatch.setenv("ALLOW_PRIVATE_WEBHOOKS", "1")
+    submitted = []
+    monkeypatch.setattr(
+        webhook_service.POOL, "submit", lambda fn, *a: submitted.append(a) or True
+    )
+    app.config["WEBHOOK_SYNC"] = False
+    try:
+        register(auth_client, "http://127.0.0.1:9/x", ["period_started"])
+        auth_client.post("/periods", json={"start_date": TODAY.isoformat()})
+    finally:
+        app.config["WEBHOOK_SYNC"] = True
+    assert len(submitted) == 1
+
+
+def test_auto_disable_after_consecutive_failures(auth_client, db, monkeypatch):
+    monkeypatch.setenv("ALLOW_PRIVATE_WEBHOOKS", "1")
+    r = Receiver([500])
+    try:
+        h = register(auth_client, r.url, ["period_started"])
+        hook = Webhook.query.one()
+        hook.update(failures=webhook_service.AUTO_DISABLE_AFTER - 1)
+        auth_client.post("/periods", json={"start_date": TODAY.isoformat()})
+        hook = fresh()
+        assert hook.active is False
+        assert "automatically" in hook.disabled_reason
+        got = auth_client.get(url_for("integrations.get_webhook", hook_id=h["id"]))
+        assert got.get_json()["active"] is False
+        assert "automatically" in got.get_json()["disabled_reason"]
+        # re-enabling clears the counter and the reason
+        up = auth_client.patch(
+            url_for("integrations.update_webhook", hook_id=h["id"]),
+            json={"active": True},
+        )
+        assert up.get_json()["disabled_reason"] is None
+        assert up.get_json()["failures"] == 0
+    finally:
+        r.close()
+
+
+def test_failure_counter_resets_on_success(auth_client, recv):
+    register(auth_client, recv.url, ["period_started"])
+    Webhook.query.one().update(failures=webhook_service.AUTO_DISABLE_AFTER - 2)
+    auth_client.post("/periods", json={"start_date": TODAY.isoformat()})
+    hook = fresh()
+    assert hook.failures == 0 and hook.active is True

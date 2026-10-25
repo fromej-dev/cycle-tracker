@@ -50,8 +50,14 @@ Payload (JSON, minimal):
 `period_expected_soon` adds `"probability": "50-75%"` or `"75-100%"`. Headers:
 `X-Timestamp` and `X-Signature: sha256=<hex>` where the signature is
 `HMAC_SHA256(secret, "<X-Timestamp>.<raw body>")`. Delivery: 3 attempts (backoff
-0 s, 1 s, 3 s; 2 s timeout each) in a background thread; 5xx/timeouts are retried,
-other 4xx are not; redirects are not followed.
+0 s, 1 s, 3 s) on a small background worker pool (8 workers; if the queue is full an
+event is dropped rather than delaying requests). Each attempt has a hard 5 s limit in
+total, including connect, TLS and a slow-trickling response; 5xx/timeouts are retried,
+other 4xx are not; redirects are not followed. After 10 failed deliveries in a row the
+webhook is switched off and `disabled_reason` in `GET /users/me/webhooks` says why;
+`PATCH {"active": true}` re-enables it. Target addresses are checked including IPv4
+addresses embedded in IPv6 (NAT64, 6to4, Teredo, `::ffff:`), and multicast/reserved
+ranges are refused.
 
 Home Assistant's webhook trigger cannot verify signatures, so treat the long random
 `webhook_id` as the secret, keep `local_only: true`, and do not expose HA's webhook
@@ -131,6 +137,26 @@ Entity: `sensor.cycle_status` (state `period` / `expected_soon` / `none`, attrib
 ## Privacy notes
 
 Payloads and the sensor never contain past dates, cycle lengths, symptoms or exact
-probabilities. Webhook secrets are stored in the database in clear (HMAC needs the
-key); sensor and share tokens are stored only as SHA-256 hashes. Revoke with
-`DELETE /users/me/webhooks/<id>` and `DELETE /users/me/home-assistant`.
+probabilities. Sensor and share tokens are stored only as SHA-256 hashes.
+Revoke with `DELETE /users/me/webhooks/<id>` and `DELETE /users/me/home-assistant`.
+
+* **Webhook secrets are stored in clear text** in the database, because the HMAC key
+  must be readable to sign each delivery (they are shown to you only once). Protect
+  database backups and dumps like credentials, and use `rotate-secret` if one leaks.
+* **Events can be lost.** Time-driven events (`period_expected_soon`,
+  `fertile_window_starting`) are marked as sent *before* they are delivered, so each
+  fires at most once per cycle even with several workers. A crash or restart between
+  that mark and the send can therefore lose that one event; it is not re-sent.
+  Delivery is also best-effort (see the queue and auto-disable behaviour above).
+* **What repeated polling can still reveal.** The partner page and the sensor show
+  only coarse buckets, but someone who polls them every day sees a time series. The
+  thresholds between buckets are shifted by a stable 0-2 days per link and a bucket
+  only moves further away when the forecast is clearly later, which blurs the exact
+  day a bucket changes without hiding it. Roughly when the next period is due can
+  still be read off the day the status changes, and the day "period expected soon"
+  stops being shown is about when a period began. The partner page shows
+  "Nothing to share right now" during a period unless the owner turns on
+  `scope.show_current`; with it on (and always for the Home Assistant `period` state)
+  the start and end of every period are visible exactly. Over months, a watcher can
+  also learn the typical cycle length. Share the link only with someone you trust with
+  that, and rotate or revoke it whenever that changes.

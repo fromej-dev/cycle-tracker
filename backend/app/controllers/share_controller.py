@@ -64,7 +64,13 @@ def home_assistant_state(token: str):
     user = lookup_user(User.ha_token_hash, token)
     if user is None:
         return _missing()
-    hu = HeadsUpService.compute(user, 7, bool(user.ha_include_fertile))
+    hu = HeadsUpService.compute(
+        user,
+        7,
+        bool(user.ha_include_fertile),
+        link_key=user.ha_token_hash,
+        slot="ha",
+    )
     attrs = {"days_until_likely_start": hu["days_bucket"]}
     if user.ha_include_fertile:
         attrs["fertile_window"] = hu["fertile"]

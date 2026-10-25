@@ -59,9 +59,11 @@ def test_out_of_range_threshold(gaps, flagged):
     assert ("cycle_length_out_of_range" in codes(r)) is flagged
 
 
-@pytest.mark.parametrize("last,flagged", [(34, False), (35, True), (36, True)])
-def test_variability_exactly_seven(last, flagged):
-    # spread = last - 28 (28 is the shortest); all within the band of non-flag lengths
+@pytest.mark.parametrize(
+    "last,flagged", [(34, False), (35, False), (36, True), (37, True)]
+)
+def test_variability_flags_only_beyond_seven(last, flagged):
+    # spread = last - 28 (28 is the shortest): 7 is FIGO normal, 8 is flagged
     r = build(mk([28, 28, 28, 28, 28, last]))
     assert r["stats"]["variability_days"] == last - 28
     assert ("cycle_variability" in codes(r)) is flagged
@@ -70,13 +72,35 @@ def test_variability_exactly_seven(last, flagged):
 def test_variability_wording_cites_thresholds():
     r = build(mk([28, 28, 28, 28, 28, 38]))
     f = next(f for f in r["flags"] if f["code"] == "cycle_variability")
-    assert "7 days or more" in f["threshold"] and "7-9" in f["threshold"]
+    assert "more than 7 days" in f["threshold"] and "7-9" in f["threshold"]
+    assert "the last 12 months" in f["threshold"]
     assert "above the 9-day" in f["observed"]
+    assert "the last 12 months" in DoctorReportService.render_html(r)
 
 
-def test_variability_uses_last_six_only():
+def test_variability_uses_last_twelve_months():
+    # 8 recent cycles x 28 d span ~7.5 months: the 40-day cycle is inside the window
     r = build(mk([28, 40] + [28] * 6))
+    assert r["stats"]["variability_days"] == 12
+    assert r["stats"]["variability_window"] == "the last 12 months"
+    # a 40-day cycle older than 12 months is ignored
+    r = build(mk([40] + [28] * 14))
     assert r["stats"]["variability_days"] == 0
+    assert r["stats"]["variability_cycles"] < 15
+
+
+def test_variability_window_independent_of_report_range():
+    r = build(mk([28, 40] + [28] * 6), months=6)
+    assert r["stats"]["variability_days"] == 12
+
+
+def test_variability_falls_back_to_all_cycles():
+    # only one cycle in the last 12 months -> use every logged cycle
+    ps = mk([28, 28, 36], last_offset=500)
+    ps.append((TODAY - TD(days=10), TODAY - TD(days=6)))
+    r = build(ps)
+    assert r["stats"]["variability_window"] == "all logged cycles"
+    assert r["stats"]["variability_days"] is not None
 
 
 @pytest.mark.parametrize("dur,flagged", [(8, False), (9, True)])
@@ -152,6 +176,24 @@ def test_name_hidden_by_default_and_escaped():
     )
     assert "<b>x</b>" not in html and "&lt;b&gt;" in html
     assert "alice" not in DoctorReportService.render_html(build(mk([28] * 3)))
+
+
+def test_html_has_no_script_or_inline_handler():
+    html = DoctorReportService.render_html(build(mk([28] * 4)))
+    assert "<script" not in html and "onclick" not in html.lower()
+    assert "<button" not in html
+    assert "browser's Print" in html
+
+
+def test_csp_and_headers_lock_down_scripts(auth_client, test_user):
+    for s, e in mk([28] * 4):
+        Period(user_id=test_user.id, start_date=s, end_date=e).save()
+    r = auth_client.get(url_for("doctor_report.doctor_report_html"))
+    csp = r.headers["Content-Security-Policy"]
+    assert "script-src 'none'" in csp and "script-src 'unsafe-inline'" not in csp
+    assert "frame-ancestors 'none'" in csp
+    assert "style-src 'unsafe-inline'" in csp
+    assert r.headers["X-Content-Type-Options"] == "nosniff"
 
 
 def test_endpoints(auth_client, test_user):

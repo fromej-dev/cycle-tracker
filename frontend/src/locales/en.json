@@ -551,6 +551,8 @@
     "nameHelp": "Shown at the top of their page.",
     "window": "Heads-up window (days)",
     "windowHelp": "Say 'period likely soon' this many days ahead (2 to 14).",
+    "showCurrent": "Show when a period is happening",
+    "showCurrentHelp": "Off by default. When on, your partner sees \"Period now\", which over time reveals your exact period dates.",
     "fertile": "Also show a fertile hint",
     "fertileHelp": "Off by default. Adds a coarse fertile-window hint.",
     "create": "Create link",

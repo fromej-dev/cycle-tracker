@@ -18,17 +18,17 @@ const shownUrl = ref<string | null>(null);
 const rotateAsk = ref(false);
 const offAsk = ref(false);
 const dirty = ref(false);
-const form = reactive({ name: '', window_days: 3, fertile: false });
+const form = reactive({ name: '', window_days: 3, fertile: false, show_current: false });
 
 onMounted(async () => {
   try { const r = await partnerApi.get(); enabled.value = r.data.enabled; if (r.data.enabled) fill(r.data); }
   catch (e: any) { error.value = apiMessage(e, t('partner.errors.generic')); }
   loading.value = false;
 });
-function fill(p: { name: string; scope: { fertile: boolean; window_days: number } }) {
-  form.name = p.name; form.window_days = p.scope.window_days; form.fertile = p.scope.fertile;
+function fill(p: { name: string; scope: { fertile: boolean; window_days: number; show_current?: boolean } }) {
+  form.name = p.name; form.window_days = p.scope.window_days; form.fertile = p.scope.fertile; form.show_current = !!p.scope.show_current;
 }
-const body = () => ({ name: form.name.trim(), scope: { fertile: form.fertile, window_days: Number(form.window_days) } });
+const body = () => ({ name: form.name.trim(), scope: { fertile: form.fertile, window_days: Number(form.window_days), show_current: form.show_current } });
 const fullUrl = (r: { path: string; url: string | null }) => r.url ?? `${location.origin}${r.path}`;
 const valid = computed(() => form.window_days >= 2 && form.window_days <= 14);
 
@@ -71,6 +71,10 @@ async function turnOff() {
           <input id="partner-days" v-model.number="form.window_days" type="number" min="2" max="14" inputmode="numeric" class="block w-full" />
           <p class="mt-1.5 text-xs leading-snug text-ink-soft">{{ $t('partner.windowHelp') }}</p>
         </div>
+        <label class="flex items-start gap-3">
+          <input type="checkbox" v-model="form.show_current" class="share-check" />
+          <span><span class="block text-[0.9375rem] font-medium">{{ $t('partner.showCurrent') }}</span><span class="block text-xs leading-snug text-ink-soft">{{ $t('partner.showCurrentHelp') }}</span></span>
+        </label>
         <label class="flex items-start gap-3">
           <input type="checkbox" v-model="form.fertile" class="share-check" />
           <span><span class="block text-[0.9375rem] font-medium">{{ $t('partner.fertile') }}</span><span class="block text-xs leading-snug text-ink-soft">{{ $t('partner.fertileHelp') }}</span></span>

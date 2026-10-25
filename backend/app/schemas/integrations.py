@@ -21,6 +21,12 @@ class ShareScopeSchema(Schema):
     fertile = fields.Boolean(
         metadata={"description": "Also show a coarse fertile hint (default false)"}
     )
+    show_current = fields.Boolean(
+        metadata={
+            "description": "Show 'Period now' while a period is ongoing (default false)."
+            " Off: a neutral 'Nothing to share right now'."
+        }
+    )
     window_days = fields.Integer(
         validate=validate.Range(min=MIN_WINDOW, max=MAX_WINDOW),
         metadata={"description": "Show 'period likely soon' within this many days"},
@@ -77,6 +83,7 @@ class WebhookSchema(Schema):
     last_status = fields.Integer(allow_none=True)
     last_attempt_at = fields.DateTime(allow_none=True)
     failures = fields.Integer(required=True)
+    disabled_reason = fields.String(allow_none=True)
     secret = fields.String(
         dump_only=True, metadata={"description": "Present only when created/rotated"}
     )

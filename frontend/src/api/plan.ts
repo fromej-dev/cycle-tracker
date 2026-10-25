@@ -72,7 +72,7 @@ export const feedApi = {
   revoke: () => apiClient.delete('/users/me/calendar-feed'),
 };
 
-export interface PartnerShare { enabled: boolean; name: string; scope: { fertile: boolean; window_days: number } }
+export interface PartnerShare { enabled: boolean; name: string; scope: { fertile: boolean; window_days: number; show_current: boolean } }
 export interface HomeAssistant { enabled: boolean; include_fertile: boolean }
 export interface Webhook { id: number; url: string; events: string[]; active: boolean; last_status: number | null; last_attempt_at: string | null; failures: number; secret?: string }
 export const WEBHOOK_EVENTS = ['period_started', 'period_ended', 'period_expected_soon', 'fertile_window_starting'] as const;
@@ -80,8 +80,8 @@ type Created = { path: string; url: string | null };
 
 export const partnerApi = {
   get: () => apiClient.get<PartnerShare>('/users/me/partner-share'),
-  create: (b: { name: string; scope: { fertile: boolean; window_days: number } }) => apiClient.post<Created>('/users/me/partner-share', b),
-  update: (b: Partial<{ name: string; scope: { fertile: boolean; window_days: number } }>) => apiClient.patch<PartnerShare>('/users/me/partner-share', b),
+  create: (b: { name: string; scope: { fertile: boolean; window_days: number; show_current: boolean } }) => apiClient.post<Created>('/users/me/partner-share', b),
+  update: (b: Partial<{ name: string; scope: { fertile: boolean; window_days: number; show_current: boolean } }>) => apiClient.patch<PartnerShare>('/users/me/partner-share', b),
   revoke: () => apiClient.delete('/users/me/partner-share'),
 };
 

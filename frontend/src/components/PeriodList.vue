@@ -2,7 +2,7 @@
   <div>
     <ul class="group-list phase-period">
       <li
-          v-for="period in periodsStore.periods"
+          v-for="period in visiblePeriods"
           :key="period.id"
           class="py-3.5 first:pt-0 last:pb-0 flex justify-between items-center gap-3"
       >
@@ -25,6 +25,9 @@
         </button>
       </li>
     </ul>
+    <button v-if="periodsStore.periods.length > LIMIT" @click="expanded = !expanded" class="mt-4 w-full text-center text-sm font-semibold text-primary py-2 rounded-xl hover:bg-primary-soft transition-colors">
+      {{ expanded ? $t('periodList.showLess') : $t('periodList.showAll', { n: periodsStore.periods.length }) }}
+    </button>
     <div v-if="!periodsStore.periods.length && !periodsStore.loading" class="text-center text-ink-soft py-4">{{ $t('periodList.noPeriods') }}</div>
 
     <!-- Delete Confirmation Modal -->
@@ -40,7 +43,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { usePeriodsStore } from '@/stores/periods';
 import { useReportsStore } from "@/stores/reports";
 import { useToast } from '@/composables/useToast';
@@ -55,6 +58,10 @@ const { t, locale } = useI18n();
 
 const rangeText = (period) =>
   `${formatDay(period.start_date, locale.value)} – ${period.end_date ? formatDay(period.end_date, locale.value) : t('periodList.ongoing')}`;
+
+const LIMIT = 4;
+const expanded = ref(false);
+const visiblePeriods = computed(() => (expanded.value ? periodsStore.periods : periodsStore.periods.slice(0, LIMIT)));
 
 const showDeleteModal = ref(false);
 const periodToDelete = ref(null);

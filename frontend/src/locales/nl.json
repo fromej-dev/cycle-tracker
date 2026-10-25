@@ -252,7 +252,9 @@
       "message": "Weet je zeker dat je deze menstruatie wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
       "confirm": "Ja, verwijderen",
       "cancel": "Annuleren"
-    }
+    },
+    "showAll": "Toon alle {n}",
+    "showLess": "Toon minder"
   },
   "confirmationModal": {
     "title": "Bevestig actie",
@@ -286,5 +288,42 @@
     "luteal": "Overige dagen",
     "predicted": "Voorspeld",
     "estimated": "Schatting"
+  },
+  "today": {
+    "eyebrow": "Vandaag, {date}",
+    "dayN": "Dag {n}",
+    "periodDayN": "Menstruatiedag {n}",
+    "periodUsually": "Duurt meestal ongeveer {n} dagen",
+    "likely": "Menstruatie waarschijnlijk {range}",
+    "likelyPct": "{pct}%",
+    "lateBy": "{count} dag later dan verwacht | {count} dagen later dan verwacht",
+    "next3": "{pct}% kans dat het binnen 3 dagen begint",
+    "needMore": "Log nog een paar menstruaties voor voorspellingen",
+    "emptyTitle": "Begin je eerste cyclus",
+    "emptyBody": "Log een menstruatie en je cyclus komt hier tot leven.",
+    "showAll": "Toon alle {n}",
+    "showLess": "Toon minder",
+    "legendPeriod": "Menstruatie",
+    "legendFertile": "Vruchtbaar",
+    "legendPredicted": "Voorspelde start",
+    "predictedDesc": "Hoe zachter en breder de boog, hoe onzekerder de voorspelling.",
+    "ovulation": "Eisprong",
+    "today": "Vandaag"
+  },
+  "forecast": {
+    "confidence": {
+      "learning": "Ik leer je cyclus nog kennen",
+      "regular": "Je cycli zijn regelmatig",
+      "variable": "Je cycli variëren een beetje",
+      "irregular": "Je cycli zijn onregelmatig",
+      "overdue": "Later dan gebruikelijk"
+    },
+    "basedOn": "Gebaseerd op {n} cycli"
+  },
+  "insights": {
+    "cycle": "Gemiddelde cyclus",
+    "cyclePlusMinus": "{avg} ± {sd} dagen",
+    "periodLength": "Gemiddelde menstruatie",
+    "periodDays": "{n} dagen"
   }
 }

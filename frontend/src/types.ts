@@ -60,6 +60,22 @@ export interface CycleContext {
 }
 
 
+export interface ForecastInterval { start: string; end: string }
+export interface ForecastDay { date: string; p_start: number; p_bleeding: number; p_fertile: number }
+export type ForecastConfidence = 'learning' | 'regular' | 'variable' | 'irregular' | 'overdue';
+export interface Forecast {
+    most_likely_start: string | null;
+    interval_50: ForecastInterval | null;
+    interval_80: ForecastInterval | null;
+    probability_next_3_days: number | null;
+    confidence: ForecastConfidence;
+    predictive_sd_days: number | null;
+    cycles_used: number;
+    days: ForecastDay[] | null;
+    fertile_window: { start: string; end: string; ovulation_date: string | null; ovulation_interval_80?: ForecastInterval | null } | null;
+    is_late: boolean;
+}
+
 // --- Auth & User ---
 
 export interface Login {
@@ -165,6 +181,7 @@ export interface ReportsState {
     periodStats: PeriodStats | null;
     cycleStats: CycleStats | null;
     cycleContext: CycleContext | null;
+    forecast: Forecast | null;
     predictedNextPeriod: PredictedPeriod | null;
     ovulationWindow: OvulationWindow | null;
     loading: boolean;
@@ -179,4 +196,5 @@ export interface ReportsActions {
     fetchPredictedNextPeriod(): Promise<void>;
     fetchOvulationWindow(): Promise<void>;
     fetchCycleContext(): Promise<void>;
+    fetchForecast(): Promise<void>;
 }

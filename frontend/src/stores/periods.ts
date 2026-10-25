@@ -93,7 +93,7 @@ export const usePeriodsStore = defineStore<'periods', PeriodsState, {}, PeriodsA
         async refreshStats() {
             const reportStore = useReportsStore()
             await reportStore.fetchPeriodStats()
-            await reportStore.fetchCycleContext()
+            await Promise.all([reportStore.fetchCycleContext(), reportStore.fetchForecast()])
         }
     }
 });

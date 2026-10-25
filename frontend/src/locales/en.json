@@ -252,7 +252,9 @@
       "message": "Are you sure you want to delete this period? This action cannot be undone.",
       "confirm": "Yes, Delete",
       "cancel": "Cancel"
-    }
+    },
+    "showAll": "Show all {n}",
+    "showLess": "Show less"
   },
   "confirmationModal": {
     "title": "Confirm action",
@@ -286,5 +288,42 @@
     "luteal": "Other days",
     "predicted": "Predicted",
     "estimated": "Estimate"
+  },
+  "today": {
+    "eyebrow": "Today, {date}",
+    "dayN": "Day {n}",
+    "periodDayN": "Period day {n}",
+    "periodUsually": "Usually lasts about {n} days",
+    "likely": "Period likely {range}",
+    "likelyPct": "{pct}%",
+    "lateBy": "{count} day later than expected | {count} days later than expected",
+    "next3": "{pct}% chance it starts within 3 days",
+    "needMore": "Log a few more periods to see predictions",
+    "emptyTitle": "Start your first cycle",
+    "emptyBody": "Log a period and your cycle comes to life here.",
+    "showAll": "Show all {n}",
+    "showLess": "Show less",
+    "legendPeriod": "Period",
+    "legendFertile": "Fertile",
+    "legendPredicted": "Predicted start",
+    "predictedDesc": "The softer and wider the arc, the less sure the forecast.",
+    "ovulation": "Ovulation",
+    "today": "Today"
+  },
+  "forecast": {
+    "confidence": {
+      "learning": "Still learning your cycle",
+      "regular": "Your cycles are regular",
+      "variable": "Your cycles vary a little",
+      "irregular": "Your cycles are irregular",
+      "overdue": "Running later than usual"
+    },
+    "basedOn": "Based on {n} cycles"
+  },
+  "insights": {
+    "cycle": "Average cycle",
+    "cyclePlusMinus": "{avg} ± {sd} days",
+    "periodLength": "Average period",
+    "periodDays": "{n} days"
   }
 }

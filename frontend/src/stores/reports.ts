@@ -7,6 +7,7 @@ export const useReportsStore = defineStore<'reports', ReportsState, {}, ReportsA
         periodStats: {},
         cycleStats: null,
         cycleContext: {},
+        forecast: null,
         predictedNextPeriod: null,
         ovulationWindow: null,
         loading: false,
@@ -70,11 +71,22 @@ export const useReportsStore = defineStore<'reports', ReportsState, {}, ReportsA
             }
         },
 
+        async fetchForecast() {
+            // A failed forecast must never take the dashboard down: the ring degrades to "still learning".
+            try {
+                const response = await ReportApi.fetchForecast();
+                this.forecast = response.data;
+            } catch (error: any) {
+                this.forecast = null;
+                console.error('Fetch forecast error:', error);
+            }
+        },
+
         async fetchCycleContext() {
             this.error = null;
             try {
                 const response = await ReportApi.fetchCycleContext();
-                Object.assign(this.cycleContext, response.data)
+                this.cycleContext = response.data // replace, never merge: stale fields would linger after a period ends
                 return this.cycleContext
             } catch (error: any) {
                 this.error = error.response?.data?.message || 'Failed to fetch cycle context';

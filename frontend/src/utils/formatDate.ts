@@ -26,5 +26,6 @@ export function formatRange(start: string | null | undefined, end: string | null
     const sameMonth = a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear();
     const yr = b.getFullYear() !== new Date().getFullYear() ? ' yyyy' : '';
     const s = sameMonth ? format(a, 'd', { locale: loc }) : format(a, 'd MMM', { locale: loc });
-    return `${s} – ${format(b, 'd MMM' + yr, { locale: loc })}`.replace(/\./g, '');
+    // non-breaking spaces: a date range must never wrap in the middle
+    return `${s} – ${format(b, 'd MMM' + yr, { locale: loc })}`.replace(/\./g, '').replace(/ /g, '\u00A0');
 }

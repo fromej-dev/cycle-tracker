@@ -4,7 +4,7 @@ import {
     PeriodStats,
     CycleStats,
     PredictedPeriod,
-    OvulationWindow, CycleContext
+    OvulationWindow, CycleContext, Forecast
 } from '@/types';
 
 const BASE_URL = '/reports';
@@ -24,6 +24,10 @@ class ReportApi {
 
     static fetchOvulationWindow(): Promise<AxiosResponse<OvulationWindow>> {
         return apiClient.get(`${BASE_URL}/ovulation-window`);
+    }
+
+    static fetchForecast(): Promise<AxiosResponse<Forecast>> {
+        return apiClient.get(`${BASE_URL}/forecast`);
     }
 
     static fetchCycleContext(): Promise<AxiosResponse<CycleContext>> {

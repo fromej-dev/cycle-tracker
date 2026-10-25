@@ -20,12 +20,17 @@ What an event covers
   published if (a) its event is at most min(21 days, mean cycle) long, (b) it starts
   at least ``MIN_GAP`` days after the previous event ends, and (c) Date Check itself
   rates the *exact* event dates (never clipped) at >= 50% with no "far ahead / flat"
-  note. The first failure ends the list. Hysteresis: an event that is already being
-  published only needs 40% to stay, so borderline forecasts do not flap.
+  note. The first failure ends the list. Hysteresis, keyed by event identity: an event
+  that is already published only needs ``KEEP_MASS`` (40%) to stay and may grow to
+  ``KEEP_MAX_DAYS``; if it fails anyway it keeps its last dates for up to
+  ``GRACE_POLLS`` days (still marked as an estimate when the user opted in), so it can
+  briefly lag Date Check. A prediction that moves more than ``JUMP_DAYS`` gets a new
+  identity instead of being moved.
 * Optional fertile windows (opt-in): ovulation is ~14 days before the start (as in the
   engine), fertile window = ovulation -5..+1, derived from the same cycle window. They
   are published only when at most ``FERTILE_MAX_DAYS`` long, never entirely in the
-  past, and when no period event overlaps them and P(bleeding) stays below 0.2.
+  past, when no period event overlaps them, and when Date Check's P(any bleeding) in
+  the window is below ``FERTILE_MAX_BLEED``.
 Users with no data or a lapsed history ("overdue") get only their logged periods.
 
 An empty calendar is deliberate: RFC 5545 3.6 asks for at least one component, but
@@ -34,13 +39,17 @@ clutter a calendar that is often shared at work.
 
 Identity and revisions
 ----------------------
-UIDs are opaque (HMAC of a per-user counter, ``<hex>@feed``), the PRODID is neutral:
-nothing in the file names this app. A small JSON state on the user (updated with a
+UIDs are opaque (``<hex>@feed``, an HMAC under a random per-feed key stored in
+``users.calendar_uid_key`` and regenerated on rotation), so they reveal nothing about
+the user, the app's SECRET_KEY or the event kind; the PRODID is neutral: nothing in
+the file names this app. A small JSON state on the user (updated with a
 compare-and-swap, never on HEAD) keeps (a) predicted "slots": the next predicted
 period keeps its UID when it is logged (it is *adopted* by the new period), so users'
-alarms and notes survive, and slot 2 becomes slot 1; (b) per-event content hash,
+alarms and notes survive; spotting merged into a previous bleed never adopts a slot,
+and deleting an adopted period hands its UID back; (b) per-event content hash,
 SEQUENCE and last-change time, so only an event that really changed is revised.
-DTSTAMP equals LAST-MODIFIED, the event's last revision.
+Removed events are kept as tombstones (up to ``TOMBSTONES``) so a returning UID
+continues its SEQUENCE. DTSTAMP equals LAST-MODIFIED, the event's last revision.
 """
 
 from __future__ import annotations

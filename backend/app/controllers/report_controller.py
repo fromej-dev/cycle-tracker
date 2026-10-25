@@ -5,10 +5,11 @@ from app.models import User
 from app.schemas import CycleStatsSchema, PeriodStatsSchema
 from app.schemas.report import (
     CycleContextSchema,
+    ForecastSchema,
     OvulationWindowSchema,
     PredictionSchema,
 )
-from app.services import ReportService
+from app.services import ForecastService, ReportService
 
 report_bp = APIBlueprint("reports", __name__, url_prefix="/reports")
 
@@ -88,6 +89,21 @@ def get_cycle_context():
     if not context:
         return {}  # Empty object if no periods exist yet
     return context
+
+
+@report_bp.route("/forecast", methods=["GET"])
+@report_bp.output(ForecastSchema)
+@jwt_required()
+def get_forecast():
+    """
+    Probabilistic forecast of the next period start.
+    Returns the most likely date, 50% and 80% intervals, per-day probabilities of
+    starting, bleeding and being fertile for the next ~45 days, and a confidence
+    label. The forecast is conditioned on today: if the period is late, the
+    probability mass shifts forward.
+    """
+    user_id = get_jwt_identity()
+    return ForecastService.forecast(user_id)
 
 
 @report_bp.route("/general", methods=["GET"])

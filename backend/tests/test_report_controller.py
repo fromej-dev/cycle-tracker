@@ -152,8 +152,8 @@ def test_get_predicted_next_period(auth_client, test_user, db):
     assert response.status_code == 200
     data = response.get_json()
 
-    # Avg cycle length = 28.0, last period = Feb 27 => predicted = Mar 26
-    assert data["predicted_start"] == "2023-03-26"
+    # Avg cycle length = 28.0, last period = Feb 27 => next start = Feb 27 + 28 = Mar 27
+    assert data["predicted_start"] == "2023-03-27"
 
 
 def test_get_ovulation_window(auth_client, test_user, db):
@@ -178,11 +178,11 @@ def test_get_ovulation_window(auth_client, test_user, db):
     assert response.status_code == 200
     data = response.get_json()
 
-    # Last period = Feb 27, next predicted = Mar 26
-    # Ovulation = Mar 12, fertile = Mar 8 - 13
-    assert data["ovulation_date"] == "2023-03-12"
-    assert data["fertile_window_start"] == "2023-03-08"
-    assert data["fertile_window_end"] == "2023-03-13"
+    # Last period = Feb 27, next predicted = Mar 27
+    # Ovulation = Mar 13, fertile = Mar 9 - 14
+    assert data["ovulation_date"] == "2023-03-13"
+    assert data["fertile_window_start"] == "2023-03-09"
+    assert data["fertile_window_end"] == "2023-03-14"
 
 
 def test_get_predicted_next_period_insufficient_data(auth_client, test_user, db):

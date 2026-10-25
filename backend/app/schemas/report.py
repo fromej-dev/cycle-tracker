@@ -63,3 +63,40 @@ class OvulationWindowSchema(Schema):
     ovulation_date = fields.Date(required=True)
     fertile_window_start = fields.Date(required=True)
     fertile_window_end = fields.Date(required=True)
+
+
+class DateIntervalSchema(Schema):
+    start = fields.Date(allow_none=True)
+    end = fields.Date(allow_none=True)
+
+
+class ForecastDaySchema(Schema):
+    date = fields.Date(required=True)
+    p_start = fields.Float(required=True)
+    p_bleeding = fields.Float(required=True)
+    p_fertile = fields.Float(required=True)
+
+
+class ForecastFertileWindowSchema(Schema):
+    start = fields.Date(allow_none=True)
+    end = fields.Date(allow_none=True)
+    ovulation_date = fields.Date(allow_none=True)
+    ovulation_interval_80 = fields.Nested(DateIntervalSchema, allow_none=True)
+
+
+class ForecastSchema(Schema):
+    """Probabilistic forecast of the next period start."""
+
+    most_likely_start = fields.Date(allow_none=True)
+    interval_50 = fields.Nested(DateIntervalSchema, allow_none=True)
+    interval_80 = fields.Nested(DateIntervalSchema, allow_none=True)
+    probability_next_3_days = fields.Float(allow_none=True)
+    confidence = fields.String(
+        required=True,
+        metadata={"description": "learning, regular, variable or irregular"},
+    )
+    predictive_sd_days = fields.Float(allow_none=True)
+    cycles_used = fields.Integer(required=True)
+    days = fields.List(fields.Nested(ForecastDaySchema), required=True)
+    fertile_window = fields.Nested(ForecastFertileWindowSchema, allow_none=True)
+    is_late = fields.Boolean(required=True)

@@ -121,9 +121,8 @@ class ReportService:
             return None
 
         avg_cycle_length = round(mean(cycle_lengths))
-        predicted_date = last_period_start + datetime.timedelta(
-            days=avg_cycle_length - 1
-        )
+        # Cycle length is start-to-start, so the next start is exactly one cycle later.
+        predicted_date = last_period_start + datetime.timedelta(days=avg_cycle_length)
         return predicted_date
 
     @staticmethod

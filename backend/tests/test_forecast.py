@@ -1,10 +1,15 @@
 import datetime
 
+import pytest
 from flask import url_for
 
 from app.models import Period
 from app.services import ForecastService, ReportService
-from app.services.forecast_service import is_multimodal, mode_components
+from app.services.forecast_service import (
+    headline_component,
+    is_multimodal,
+    mode_components,
+)
 from scripts.backtest_forecast import (
     EVAL_SEEDS,
     EVAL_USERS,
@@ -280,7 +285,7 @@ def test_intervals_always_contain_most_likely_and_have_enough_mass():
         assert fc["interval_80"]["end"] >= fc["interval_50"]["end"]
         assert fc["interval_50"]["start"] >= last + TD(days=age)
         assert fc["_interval_masses"]["80"] >= 0.8 - 1e-9
-        assert fc["_interval_masses"]["50"] >= 0.5 - 1e-9
+        assert fc["_interval_masses"]["50"] >= model._q50 - 1e-9  # recalibrated target
 
 
 def test_regular_60_day_user_is_forecast_near_60():
@@ -556,7 +561,9 @@ def test_late_regular_user_headline_stays_near_term():
         today = last + TD(days=28 + late)
         fc = ForecastService.fit(periods, today).forecast()
         ahead = (fc["most_likely_start"] - today).days
-        assert 0 <= ahead <= 12, (late, ahead)
+        # 10 days late the two modes are near 50/50: the headline may be the heavier
+        # (later) one; from 20 days late the near-term mode is the only real one
+        assert 0 <= ahead <= (21 if late == 10 else 12), (late, ahead)
         for iv in ("interval_50", "interval_80"):
             assert fc[iv]["start"] >= today
             assert fc[iv]["start"] <= fc["most_likely_start"] <= fc[iv]["end"]
@@ -565,7 +572,7 @@ def test_late_regular_user_headline_stays_near_term():
     fc10 = ForecastService.fit(periods, last + TD(days=38)).forecast()
     sw = fc10["secondary_window"]
     assert sw is not None and sw["probability"] >= 0.12
-    assert sw["start"] > fc10["most_likely_start"]
+    assert sw["start"] != fc10["most_likely_start"]
 
 
 def test_on_time_user_has_no_secondary_window():
@@ -667,3 +674,74 @@ def test_backtest_regression_guard_stress():
             s = b.summary()
             assert s["cov80"] >= 0.70, (grouping, name, day, s["cov80"])
             assert s["mae_model"] <= s["mae_naive_fixed"] + 0.1, (grouping, name, day)
+
+
+# --- headline continuity as a late period continues -------------------------------------
+
+
+def _headline_trace(gaps, days=75):
+    periods = make_periods(D(2023, 1, 1), gaps)
+    last = periods[-1][0]
+    rows = []
+    for k in range(1, days + 1):
+        model = ForecastService.fit(periods, last + TD(days=k))
+        fc = model.forecast()
+        if fc["most_likely_start"] is None:
+            continue
+        hs, he, hmass = headline_component(model._p1)
+        sw = fc["secondary_window"]
+        point = (fc["most_likely_start"] - last).days
+        assert hs <= point - 15 <= he  # headline sits in the headline mode
+        for iv in ("interval_50", "interval_80"):
+            assert fc[iv]["start"] <= fc["most_likely_start"] <= fc[iv]["end"]
+        if sw is not None:
+            assert hmass >= sw["probability"] - 1e-9, (k, hmass, sw)
+            assert hmass + sw["probability"] <= 1.0
+        rows.append((k, point, hmass, sw["probability"] if sw else None))
+    return rows
+
+
+@pytest.mark.parametrize(
+    ("gaps", "max_switches"),
+    [
+        ([28] * 8, 1),
+        ([28, 56, 28, 28, 55, 28], 2),  # 1-cycle -> 2-cycle -> 3-cycle possibilities
+        ([60] * 6, 1),
+        ([30], 1),
+    ],
+)
+def test_headline_does_not_snap_as_period_gets_later(gaps, max_switches):
+    rows = _headline_trace(gaps)
+    switches = 0
+    for (_, p0, m0, _s0), (k1, p1, m1, s1) in zip(rows, rows[1:], strict=False):
+        if abs(p1 - p0) <= 3:
+            continue
+        switches += 1
+        # a switch only where the two modes' masses cross: the old headline mode was
+        # the heavier one the day before and is the lighter one now
+        assert s1 is not None and m0 >= 0.5 >= s1, (k1, m0, s1)
+        assert min(m1, s1) >= 0.35, (k1, m1, s1)
+    assert switches <= max_switches
+
+
+def test_late_regular_user_headline_when_ten_days_late():
+    periods = make_periods(D(2023, 1, 1), [28] * 8)
+    last = periods[-1][0]
+    model = ForecastService.fit(periods, last + TD(days=38))
+    fc = model.forecast()
+    hs, he, hmass = headline_component(model._p1)
+    sw = fc["secondary_window"]
+    assert sw is not None and hmass >= sw["probability"]
+
+
+def test_skip3_falls_back_to_skip2_when_no_room():
+    from app.services import forecast_service as fs
+
+    fit = fs._fit_cycles((28, 28, 28, 28), 0)
+    assert abs(sum(fit.skip3) - 1) < 1e-9 and fit.skip3 != fit.skip2
+    # Mass only at the far end of the support: a further cycle cannot fit, so
+    # the sum is empty and skip3 is skip2 (t == 0).
+    n = len(fit.main)
+    far = [0.0] * n
+    far[n - 1] = 1.0
+    assert fs._add_one_cycle(far, list(fit.main), far) == far

@@ -261,6 +261,21 @@ def _upward_outliers(cycles: tuple[int, ...]) -> int:
     return sum(1 for c in cycles if (c - med) / scale > HUBER_C)
 
 
+def _add_one_cycle(
+    base: list[float], main: list[float], fallback: list[float]
+) -> list[float]:
+    """Distribution of ``base`` plus one ordinary cycle; ``fallback`` if none fits."""
+    n_pmf = len(main)
+    out = [0.0] * n_pmf
+    for i, a in enumerate(base):
+        if a < 1e-7:
+            continue
+        for j in range(n_pmf - MIN_CYCLE - i):
+            out[i + j + MIN_CYCLE] += a * main[j]
+    t = sum(out)
+    return [v / t for v in out] if t > 0 else fallback
+
+
 @functools.lru_cache(maxsize=2048)
 def _fit_cycles(cycles: tuple[int, ...], n_excluded: int = 0) -> _CycleFit:
     """Posterior over the (mu, sigma) grid for chronological cycle lengths.
@@ -306,22 +321,8 @@ def _fit_cycles(cycles: tuple[int, ...], n_excluded: int = 0) -> _CycleFit:
         groups.append((gw, tuple(v / gw for v in arr)))
 
     # A skipped log merges two cycles: sum of two draws from the ordinary predictive.
-    skip2 = [0.0] * n_pmf
-    for i, a in enumerate(main):
-        if a < 1e-7:
-            continue
-        for j in range(n_pmf - MIN_CYCLE - i):
-            skip2[i + j + MIN_CYCLE] += a * main[j]
-    t = sum(skip2)
-    skip2 = [v / t for v in skip2]
-    skip3 = [0.0] * n_pmf
-    for i, a in enumerate(skip2):
-        if a < 1e-7:
-            continue
-        for j in range(n_pmf - MIN_CYCLE - i):
-            skip3[i + j + MIN_CYCLE] += a * main[j]
-    t = sum(skip3)
-    skip3 = [v / t for v in skip3] if t > 0 else skip2
+    skip2 = _add_one_cycle(main, main, main)
+    skip3 = _add_one_cycle(skip2, main, skip2)  # two skipped logs: three cycles
 
     n_gaps = len(cycles) + n_excluded
     pi_skip = min(_skip_probability(n_excluded, n_gaps), MAX_SKIP_WEIGHT)
@@ -487,18 +488,29 @@ def is_multimodal(pmf: list[float]) -> bool:
     return len(mode_components(pmf)) > 1
 
 
+def headline_component(pmf: list[float]) -> tuple[int, int, float]:
+    """The mode the headline sits in: the heaviest significant mode.
+
+    Choosing by weight (earliest mode wins ties) makes the switch between modes
+    happen where their masses cross, not where a light mode gets folded away by
+    ``mode_components``; so the headline never snaps when the early mode fades.
+    """
+    comps = mode_components(pmf)
+    return max(comps, key=lambda c: (c[2], -c[0]))
+
+
 def headline_index(pmf: list[float]) -> int:
-    """User-facing point estimate: the mode, or if multimodal the near-term mode.
+    """User-facing point estimate: the median of the heaviest significant mode.
 
     With two distinct possibilities (say "a few days late" and "a forgotten log, so
-    two cycles") the argmax can sit on a far, narrow spike. The headline then is the
-    median of the EARLIEST significant mode (what the user should plan around);
-    ``secondary_window`` reports the other mode and the probability it holds.
+    two cycles") the argmax can sit on a far, narrow spike. The headline is the
+    median of the HEAVIEST mode; ``secondary_window`` reports the other mode and
+    the probability it holds.
     """
     comps = mode_components(pmf)
     if len(comps) == 1:
         return mode_index(pmf)
-    s, e, mass = comps[0]
+    s, e, mass = headline_component(pmf)
     acc = 0.0
     for i in range(s, e + 1):
         acc += pmf[i]
@@ -508,17 +520,18 @@ def headline_index(pmf: list[float]) -> int:
 
 
 def secondary_component(pmf: list[float], point: int) -> tuple[int, int, float] | None:
-    """The heaviest significant mode not containing ``point``, trimmed to its bulk."""
+    """The heaviest significant mode not containing ``point``, as (start, end, mass).
+
+    The window is that mode's narrowest span holding 80% of its mass; the mass is
+    the whole mode's, rounded down so it never pushes the pair above 1.
+    """
     others = [c for c in mode_components(pmf) if not c[0] <= point <= c[1]]
     if not others:
         return None
     s, e, mass = max(others, key=lambda c: c[2])
-    peak = max(pmf[s : e + 1])
-    while s < e and pmf[s] < 0.02 * peak:
-        s += 1
-    while e > s and pmf[e] < 0.02 * peak:
-        e -= 1
-    return s, e, mass
+    sub = [v / mass for v in pmf[s : e + 1]] if mass > 0 else pmf[s : e + 1]
+    hs, he, _ = _hdi(sub, 0.8, mode_index(sub))
+    return s + hs, s + he, math.floor(mass * 1e4) / 1e4
 
 
 def point_and_intervals(
@@ -935,7 +948,7 @@ class FittedModel:
         return {
             "start": self._date(s),
             "end": self._date(e),
-            "probability": round(mass, 4),
+            "probability": mass,
         }
 
     def _is_late(self) -> bool:

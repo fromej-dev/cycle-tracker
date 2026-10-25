@@ -16,7 +16,7 @@ import { dfLocale, formatDay, formatBetween } from '@/utils/formatDate';
 const { t, locale } = useI18n();
 const periodsStore = usePeriodsStore();
 const reports = useReportsStore();
-const { forecast, reason, byDate, prob, ovulation, lastCovered } = useCalendarForecast();
+const { forecast, reason, byDate, prob, fertileMap, lastCovered } = useCalendarForecast();
 
 const iso = (d: Date) => formatISO(d, { representation: 'date' });
 const today = startOfDay(new Date());
@@ -25,6 +25,7 @@ const todayISO = iso(today);
 onMounted(() => {
   periodsStore.fetchPeriods(1, 100);
   reports.fetchForecast();
+  if (!(reports.cycleContext as any)?.cycle_length) reports.fetchCycleContext();
 });
 
 // ---- month navigation ----
@@ -100,8 +101,10 @@ const info = (c: Cell) => {
     joinPrev: !!lg && c.col > 0 && !!loggedMap.value.get(iso(subDays(parseISO(c.iso), 1))),
     joinNext: !!lg && c.col < 6 && !!loggedMap.value.get(iso(addDays(parseISO(c.iso), 1))),
     pBleeding: pr?.p_bleeding ?? 0,
-    pFertile: pr && (pr.p_bleeding ?? 0) < 0.04 ? pr.p_fertile : 0,
-    ovulation: !lg && ovulation.value === c.iso,
+    fertile: !lg ? fertileMap.value.get(c.iso)?.strength ?? 0 : 0,
+    projected: fertileMap.value.get(c.iso)?.projected ?? false,
+    ovulation: !lg && !!fertileMap.value.get(c.iso)?.ovulation,
+    likelyStart: !lg && forecast.value?.most_likely_start === c.iso && !reason.value,
   };
 };
 
@@ -120,8 +123,8 @@ const summary = computed(() => {
 const shownEnd = computed(() => endOfMonth(addMonths(month.value, 1)));
 const beyond = computed(() => !reason.value && !!lastCovered.value && shownEnd.value > parseISO(lastCovered.value) && shownEnd.value > today);
 const beyondAll = computed(() => !reason.value && !!lastCovered.value && startOfMonth(month.value) > parseISO(lastCovered.value));
-const hasFertile = computed(() => !reason.value && [...byDate.value.values()].some((v) => v.p_fertile >= 0.08));
-const hasPred = computed(() => !reason.value && [...byDate.value.values()].some((v) => v.p_bleeding >= 0.04));
+const hasFertile = computed(() => fertileMap.value.size > 0);
+const hasPred = computed(() => !reason.value && [...byDate.value.values()].some((v) => v.p_bleeding >= 0.18));
 
 // ---- sheet ----
 const selected = ref<string | null>(null);
@@ -146,11 +149,17 @@ const facts = computed<Fact[]>(() => {
   const pr = prob(s);
   if (lg) {
     out.push({ tone: 'period', text: t('calendar.facts.logged', { n: lg.day }), sub: lg.end ? undefined : lg.last ? t('calendar.facts.ongoing') : undefined });
-  } else if (pr && pr.p_bleeding >= 0.04) {
-    out.push({ tone: 'predicted', text: t('calendar.facts.chance', { pct: pct(pr.p_bleeding) }), sub: t('calendar.facts.predictionNote') });
+  } else if (pr && pr.p_bleeding >= 0.18) {
+    out.push({ tone: 'predicted', text: t('calendar.facts.chance', { pct: pct(pr.p_bleeding) }), sub: forecast.value?.most_likely_start === s ? t('calendar.facts.likelyStart') : t('calendar.facts.predictionNote') });
   }
-  if (!lg && ovulation.value === s) out.push({ tone: 'fertile', text: t('calendar.facts.ovulation') });
-  else if (!lg && pr && pr.p_fertile >= 0.08 && pr.p_bleeding < 0.04) out.push({ tone: 'fertile', text: t('calendar.facts.fertile'), sub: t('calendar.facts.fertileChance', { pct: pct(pr.p_fertile) }) });
+  const fd = !lg ? fertileMap.value.get(s) : undefined;
+  if (fd?.ovulation) {
+    const oi = fd.projected ? null : forecast.value?.fertile_window?.ovulation_interval_80;
+    const bt = formatBetween(oi?.start, oi?.end, locale.value);
+    out.push({ tone: 'fertile', text: t('calendar.facts.ovulation'), sub: bt ? t('calendar.facts.ovulationRange', { a: bt.a, b: bt.b }) : fd.projected ? t('calendar.facts.projected') : undefined });
+  } else if (fd) {
+    out.push({ tone: 'fertile', text: t('calendar.facts.fertile'), sub: fd.projected ? t('calendar.facts.projected') : undefined });
+  }
   if (!out.length) {
     if (reason.value === 'late') out.push({ tone: 'quiet', text: t('calendar.facts.late') });
     else if (reason.value === 'learning') out.push({ tone: 'quiet', text: t('calendar.facts.learning') });
@@ -205,7 +214,8 @@ const dayLabel = (c: Cell) => {
   const pr = lg ? null : prob(c.iso);
   const base = formatDay(c.iso, locale.value, true) ?? '';
   if (lg) return `${base}, ${t('calendar.facts.logged', { n: lg.day })}`;
-  if (pr && pr.p_bleeding >= 0.04) return `${base}, ${t('calendar.facts.chance', { pct: pct(pr.p_bleeding) })}`;
+  if (pr && pr.p_bleeding >= 0.18) return `${base}, ${t('calendar.facts.chance', { pct: pct(pr.p_bleeding) })}`;
+  if (fertileMap.value.get(c.iso)) return `${base}, ${t('calendar.facts.fertile')}`;
   return base;
 };
 </script>
@@ -256,9 +266,10 @@ const dayLabel = (c: Cell) => {
 
     <ul class="legend mt-4 border-t border-line pt-3.5" :aria-label="$t('calendar.legend.title')">
       <li><span class="sw sw-logged"></span>{{ $t('calendar.legend.logged') }}</li>
-      <li v-if="hasPred"><span class="sw-scale"><i class="sw sw-pred" style="--s:.3"></i><i class="sw sw-pred" style="--s:.6"></i><i class="sw sw-pred" style="--s:1"></i></span>{{ $t('calendar.legend.predicted') }}</li>
+      <li v-if="hasPred"><span class="sw-scale"><i class="sw sw-pred" style="--s:.15"></i><i class="sw sw-pred" style="--s:.5"></i><i class="sw sw-pred" style="--s:1"></i></span>{{ $t('calendar.legend.predicted') }}</li>
       <li v-if="hasFertile"><span class="sw sw-fertile"></span>{{ $t('calendar.legend.fertile') }}</li>
       <li v-if="hasFertile"><span class="sw-ov"></span>{{ $t('calendar.legend.ovulation') }}</li>
+      <li v-if="hasPred"><span class="sw-start"></span>{{ $t('calendar.legend.start') }}</li>
       <li><span class="sw sw-today"></span>{{ $t('calendar.legend.today') }}</li>
     </ul>
     <p v-if="hasPred" class="mt-2 text-[0.75rem] leading-snug text-ink-soft">{{ $t('calendar.legend.hint') }}</p>
@@ -293,10 +304,11 @@ const dayLabel = (c: Cell) => {
 .sw-logged { background: var(--color-period); width: 1.5rem; border-radius: 9999px; }
 .sw-scale { display: inline-flex; gap: 2px; }
 .sw-pred { width: .8125rem; height: 1.0625rem; border-radius: .3rem;
-  background: color-mix(in srgb, var(--color-period) calc(7% + 30% * var(--s)), var(--color-surface));
-  border: 1.5px dashed color-mix(in srgb, var(--color-period) calc(35% + 55% * var(--s)), transparent); }
-.sw-fertile { background: color-mix(in srgb, var(--color-fertile) 26%, var(--color-surface)); }
-.sw-ov { display: inline-block; width: .4rem; height: .4rem; border-radius: 9999px; background: var(--color-fertile); }
+  background: color-mix(in srgb, var(--color-period) calc(var(--tile-t0) + var(--tile-t1) * var(--s)), var(--color-surface));
+  border: 1.5px dashed color-mix(in srgb, var(--color-period) calc(var(--edge-t0) + 50% * var(--s)), transparent); }
+.sw-fertile { background: color-mix(in srgb, var(--color-fertile) calc(var(--tile-t0) + var(--tile-t1) * .7), var(--color-surface)); border: 1.5px solid color-mix(in srgb, var(--color-fertile) calc(var(--edge-t0) + 28%), transparent); }
+.sw-ov { display: inline-block; width: .6875rem; height: .6875rem; border-radius: 9999px; border: 2px solid var(--color-fertile); }
+.sw-start { display: inline-block; width: .375rem; height: .375rem; border-radius: 9999px; background: var(--color-period); }
 .sw-today { border: 2px solid var(--color-ink); }
 
 @media (prefers-reduced-motion: no-preference) {

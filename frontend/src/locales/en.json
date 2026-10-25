@@ -320,7 +320,8 @@
     "laterThanUsual": "Later than usual for you",
     "legendForecast": "Forecast",
     "legendOverdue": "Overdue",
-    "dayChip": "Day {n}"
+    "dayChip": "Day {n}",
+    "legendElapsed": "So far"
   },
   "forecast": {
     "confidence": {
@@ -345,7 +346,7 @@
     "close": "Close",
     "start": "Period started this day",
     "end": "Period ended this day",
-    "noteForecast": "Next period most likely {range} ({pct}% sure)",
+    "noteForecast": "Period most likely starts {range} ({pct}% sure)",
     "noteLate": "Your period is later than usual, so predicted days are hidden until it starts.",
     "noteLearning": "Log a couple more periods to see predicted days.",
     "noteBeyond": "Predictions reach about six weeks ahead, so later months stay blank.",
@@ -357,7 +358,8 @@
       "fertile": "Fertile days",
       "ovulation": "Likely ovulation",
       "today": "Today",
-      "hint": "Dashed tiles are predictions, not records. The fainter the tile, the less likely."
+      "hint": "Dashed tiles are predictions, not records. The fainter the tile, the less likely.",
+      "start": "Most likely start"
     },
     "facts": {
       "logged": "Logged period day {n}",
@@ -371,7 +373,10 @@
       "nothingLogged": "Nothing logged",
       "tooFar": "Too far ahead to predict",
       "late": "Predictions are paused while your period is late",
-      "learning": "Not enough logged periods to predict yet"
+      "learning": "Not enough logged periods to predict yet",
+      "likelyStart": "Most likely start day",
+      "ovulationRange": "Could fall anywhere between {a} and {b}",
+      "projected": "Projected from your average cycle"
     },
     "errors": {
       "generic": "That didn't work. Check the dates and try again."

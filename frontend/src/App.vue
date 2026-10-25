@@ -40,6 +40,6 @@ const pwaInstall = useTemplateRef('pwa-install');
 <style scoped>
 /* room for the fixed bottom navigation + iOS home indicator */
 .pb-nav {
-  padding-bottom: calc(4.75rem + env(safe-area-inset-bottom));
+  padding-bottom: calc(7rem + env(safe-area-inset-bottom));
 }
 </style>

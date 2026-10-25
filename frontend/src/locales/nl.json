@@ -320,7 +320,8 @@
     "laterThanUsual": "Later dan gebruikelijk voor jou",
     "legendForecast": "Voorspelling",
     "legendOverdue": "Te laat",
-    "dayChip": "Dag {n}"
+    "dayChip": "Dag {n}",
+    "legendElapsed": "Tot nu"
   },
   "forecast": {
     "confidence": {
@@ -345,7 +346,7 @@
     "close": "Sluiten",
     "start": "Menstruatie begon deze dag",
     "end": "Menstruatie eindigde deze dag",
-    "noteForecast": "Volgende menstruatie waarschijnlijk {range} ({pct}% zeker)",
+    "noteForecast": "Menstruatie begint waarschijnlijk {range} ({pct}% zeker)",
     "noteLate": "Je menstruatie is later dan gewoonlijk, dus voorspelde dagen zijn verborgen tot hij begint.",
     "noteLearning": "Log nog een paar menstruaties om voorspelde dagen te zien.",
     "noteBeyond": "Voorspellingen reiken ongeveer zes weken vooruit, dus latere maanden blijven leeg.",
@@ -357,7 +358,8 @@
       "fertile": "Vruchtbare dagen",
       "ovulation": "Waarschijnlijke eisprong",
       "today": "Vandaag",
-      "hint": "Gestippelde vlakken zijn voorspellingen, geen registraties. Hoe lichter, hoe minder waarschijnlijk."
+      "hint": "Gestippelde vlakken zijn voorspellingen, geen registraties. Hoe lichter, hoe minder waarschijnlijk.",
+      "start": "Meest waarschijnlijke start"
     },
     "facts": {
       "logged": "Gelogde menstruatiedag {n}",
@@ -371,7 +373,10 @@
       "nothingLogged": "Niets gelogd",
       "tooFar": "Te ver vooruit om te voorspellen",
       "late": "Voorspellingen staan stil terwijl je menstruatie later is",
-      "learning": "Nog te weinig gelogde menstruaties om te voorspellen"
+      "learning": "Nog te weinig gelogde menstruaties om te voorspellen",
+      "likelyStart": "Meest waarschijnlijke startdag",
+      "ovulationRange": "Kan tussen {a} en {b} vallen",
+      "projected": "Geschat op basis van je gemiddelde cyclus"
     },
     "errors": {
       "generic": "Dat lukte niet. Controleer de datums en probeer opnieuw."

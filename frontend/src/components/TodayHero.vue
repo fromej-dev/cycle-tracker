@@ -80,6 +80,7 @@ const fertileRaw = computed(() => {
 });
 // a fertile window from a past cycle must never sit next to "today" in a late cycle
 const fertile = computed(() => (isLate.value || isEmpty.value ? null : fertileRaw.value));
+const ovulationIdx = computed(() => idxOf(f.value?.fertile_window?.ovulation_date ?? ctx.value?.ovulation_date));
 const fertilePast = computed(() => !!fertile.value && fertile.value.end < todayIdx.value);
 
 const forecastDays = computed(() =>
@@ -156,6 +157,7 @@ async function act() {
         :period-expected-extra="extraDays"
         :fertile="fertile"
         :fertile-past="fertilePast"
+        :ovulation-idx="fertile ? ovulationIdx : null"
         :forecast="hasForecast ? forecastDays : []"
         :range-span="rangeSpan"
         :overdue="overdue"
@@ -174,8 +176,10 @@ async function act() {
 
     <div v-if="!isEmpty" class="mt-1 flex flex-wrap justify-center gap-x-5 gap-y-1.5 text-xs text-ink-soft">
       <span class="inline-flex items-center gap-1.5"><span class="legend-dot" style="background: var(--color-period)"></span>{{ $t('today.legendPeriod') }}</span>
+      <span v-if="!isEmpty && todayIdx > 0" class="inline-flex items-center gap-1.5"><span class="legend-elapsed"></span>{{ $t('today.legendElapsed') }}</span>
       <span v-if="fertile" class="inline-flex items-center gap-1.5"><span class="legend-bar"></span>{{ $t('today.legendFertile') }}</span>
       <span v-if="overdue" class="inline-flex items-center gap-1.5"><span class="legend-dotted"></span>{{ $t('today.legendOverdue') }}</span>
+      <span v-if="fertile && ovulationIdx !== null" class="inline-flex items-center gap-1.5"><span class="legend-ov"></span>{{ $t('today.ovulation') }}</span>
       <span v-if="hasForecast" class="inline-flex items-center gap-1.5"><span class="legend-bubbles"><i></i><i></i><i></i></span>{{ $t('today.legendForecast') }}</span>
     </div>
 
@@ -200,6 +204,8 @@ async function act() {
 }
 .legend-dot { display: inline-block; width: .6rem; height: .6rem; border-radius: 9999px; }
 .legend-dotted { display: inline-block; width: 1.1rem; height: 0; border-top: 4px dotted var(--color-period); }
+.legend-elapsed { display: inline-block; width: 1.1rem; height: .6rem; border-radius: 9999px; background: color-mix(in srgb, var(--color-period) var(--ring-tint, 20%), transparent); }
+.legend-ov { display: inline-block; width: .65rem; height: .65rem; border-radius: 9999px; border: 2px solid var(--color-fertile); }
 .legend-bar { display: inline-block; width: 1.1rem; height: .3rem; border-radius: 9999px; background: var(--color-fertile); }
 .legend-bubbles { display: inline-flex; align-items: center; gap: 2px; }
 .legend-bubbles i { display: block; border-radius: 9999px; border: 1.4px solid var(--color-period); background: color-mix(in srgb, var(--color-period) 45%, transparent); }

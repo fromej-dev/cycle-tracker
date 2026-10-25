@@ -292,7 +292,7 @@
   "today": {
     "eyebrow": "Vandaag, {date}",
     "dayN": "Dag {n}",
-    "periodDayN": "Menstruatiedag {n}",
+    "periodDayN": "Dag {n} van je menstruatie",
     "periodUsually": "Duurt meestal ongeveer {n} dagen",
     "likely": "Menstruatie waarschijnlijk {range}",
     "likelyPct": "{pct}%",
@@ -306,9 +306,20 @@
     "legendPeriod": "Menstruatie",
     "legendFertile": "Vruchtbaar",
     "legendPredicted": "Voorspelde start",
-    "predictedDesc": "Hoe zachter en breder de boog, hoe onzekerder de voorspelling.",
     "ovulation": "Eisprong",
-    "today": "Vandaag"
+    "today": "Vandaag",
+    "dateLine": "Vandaag, {date}",
+    "periodInRange": "Menstruatie over {range} dagen",
+    "periodInAbout": "Menstruatie over ongeveer {n} dagen",
+    "periodInN": "Menstruatie over {n} dag | Menstruatie over {n} dagen",
+    "periodWithin": "Menstruatie binnen {n} dagen",
+    "periodAnyDay": "Menstruatie elk moment",
+    "daysLate": "{count} dag te laat | {count} dagen te laat",
+    "between": "{pct}% kans tussen {a} en {b}",
+    "laterThanUsual": "Later dan gebruikelijk voor jou",
+    "legendForecast": "Voorspelling",
+    "legendOverdue": "Te laat",
+    "dayChip": "Dag {n}"
   },
   "forecast": {
     "confidence": {

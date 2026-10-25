@@ -29,3 +29,23 @@ export function formatRange(start: string | null | undefined, end: string | null
     // non-breaking spaces: a date range must never wrap in the middle
     return `${s} – ${format(b, 'd MMM' + yr, { locale: loc })}`.replace(/\./g, '').replace(/ /g, '\u00A0');
 }
+
+/** Pieces for "between {a} and {b}": ("3", "7 Nov") within one month, ("30 Oct", "2 Nov") across months. */
+export function formatBetween(start: string | null | undefined, end: string | null | undefined, localeCode = 'en'): { a: string; b: string } | null {
+    const s = start ? parseISO(start) : null;
+    const e = end ? parseISO(end) : null;
+    if (!s || !e || !isValid(s) || !isValid(e)) return null;
+    const loc = dfLocale(localeCode);
+    const clean = (x: string) => x.replace(/\./g, '').replace(/ /g, ' ');
+    const sameMonth = s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear();
+    return {
+        a: clean(sameMonth ? format(s, 'd', { locale: loc }) : format(s, 'd MMM', { locale: loc })),
+        b: clean(format(e, 'd MMM', { locale: loc })),
+    };
+}
+
+/** "3 Nov" */
+export function formatShort(value: string | Date, localeCode = 'en'): string {
+    const d = typeof value === 'string' ? parseISO(value) : value;
+    return format(d, 'd MMM', { locale: dfLocale(localeCode) }).replace(/\./g, '');
+}

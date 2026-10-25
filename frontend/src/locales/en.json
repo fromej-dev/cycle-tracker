@@ -306,9 +306,20 @@
     "legendPeriod": "Period",
     "legendFertile": "Fertile",
     "legendPredicted": "Predicted start",
-    "predictedDesc": "The softer and wider the arc, the less sure the forecast.",
     "ovulation": "Ovulation",
-    "today": "Today"
+    "today": "Today",
+    "dateLine": "Today, {date}",
+    "periodInRange": "Period in {range} days",
+    "periodInAbout": "Period in about {n} days",
+    "periodInN": "Period in {n} day | Period in {n} days",
+    "periodWithin": "Period within {n} days",
+    "periodAnyDay": "Period due any day now",
+    "daysLate": "{count} day late | {count} days late",
+    "between": "{pct}% likely between {a} and {b}",
+    "laterThanUsual": "Later than usual for you",
+    "legendForecast": "Forecast",
+    "legendOverdue": "Overdue",
+    "dayChip": "Day {n}"
   },
   "forecast": {
     "confidence": {

@@ -27,7 +27,7 @@
             <p class="mt-2 font-display text-[1.625rem] leading-none whitespace-nowrap">{{ periodHeadline }}</p>
           </div>
         </div>
-        <FertileWindowCard
+        <FertileWindowCard v-if="!periodLate"
             :fertile-start="reportsStore.cycleContext?.fertile_window?.start"
             :fertile-end="reportsStore.cycleContext?.fertile_window?.end"
             :ovulation-date="reportsStore.cycleContext?.ovulation_date"
@@ -68,6 +68,9 @@ const { t } = useI18n();
 
 const reportsStore = useReportsStore();
 const periodStore = usePeriodsStore();
+
+// a late cycle's old fertile window would contradict the hero, so the card hides itself
+const periodLate = computed(() => !!reportsStore.forecast?.is_late || reportsStore.forecast?.confidence === 'overdue' || (reportsStore.cycleContext?.days_until_next_period ?? 1) < 0);
 
 const cycleHeadline = computed(() => {
   const avg = reportsStore.cycleContext?.cycle_length;

@@ -9,7 +9,7 @@ import { differenceInCalendarDays, parseISO, startOfDay, subDays, formatISO, isV
 import CycleRing from '@/components/CycleRing.vue';
 import { useReportsStore } from '@/stores/reports';
 import { usePeriodsStore } from '@/stores/periods';
-import { formatDay, formatRange } from '@/utils/formatDate';
+import { formatDay, formatBetween, formatShort } from '@/utils/formatDate';
 
 const { t, locale } = useI18n();
 const reports = useReportsStore();
@@ -52,62 +52,91 @@ const periodDays = computed(() => {
 const avgPeriod = computed(() => Math.round(reports.periodStats?.average_duration ?? 0));
 const extraDays = computed(() => (isOngoing.value ? Math.max(0, avgPeriod.value - periodDays.value) : 0));
 
+const baseLength = computed(() => Math.round(ctx.value?.cycle_length || 28));
 const mostLikelyIdx = computed(() => idxOf(f.value?.most_likely_start));
-const interval80EndIdx = computed(() => idxOf(f.value?.interval_80?.end));
+const r80StartIdx = computed(() => idxOf(f.value?.interval_80?.start));
+const r80EndIdx = computed(() => idxOf(f.value?.interval_80?.end));
 
-const length = computed(() => {
-  const base = interval80EndIdx.value !== null ? interval80EndIdx.value + 2 : Math.round(ctx.value?.cycle_length || 28);
-  return Math.max(21, base, todayIdx.value + 3, periodDays.value + 3);
+const isLate = computed(
+  () => !isOngoing.value && (!!f.value?.is_late || f.value?.confidence === ('overdue' as string) || (ctx.value?.days_until_next_period ?? 1) < 0),
+);
+const daysLate = computed(() => {
+  const n = ctx.value?.days_until_next_period;
+  if (typeof n === 'number' && n < 0) return -n;
+  return Math.max(1, dayNumber.value - baseLength.value);
 });
 
-const fertile = computed(() => {
+const length = computed(() => {
+  if (isLate.value) return Math.max(baseLength.value, todayIdx.value) + 9;
+  const last = r80EndIdx.value ?? mostLikelyIdx.value ?? baseLength.value;
+  return Math.min(42, Math.max(baseLength.value, last + 1, todayIdx.value + 3, periodDays.value + 4));
+});
+
+const fertileRaw = computed(() => {
   const fw = f.value?.fertile_window ?? (ctx.value?.fertile_window?.start ? ctx.value.fertile_window : null);
   const a = idxOf(fw?.start);
   const b = idxOf(fw?.end);
   return a !== null && b !== null && b >= 0 ? { start: a, end: b } : null;
 });
-const ovulationIdx = computed(() => idxOf(f.value?.fertile_window?.ovulation_date ?? ctx.value?.ovulation_date));
+// a fertile window from a past cycle must never sit next to "today" in a late cycle
+const fertile = computed(() => (isLate.value || isEmpty.value ? null : fertileRaw.value));
+const fertilePast = computed(() => !!fertile.value && fertile.value.end < todayIdx.value);
 
 const forecastDays = computed(() =>
   (f.value?.days ?? [])
     .map((d) => ({ idx: idxOf(d.date) as number, p: d.p_start }))
     .filter((d) => d.idx !== null),
 );
-const hasForecast = computed(() => !!f.value?.most_likely_start && forecastDays.value.length > 0 && !isOngoing.value);
+const hasForecast = computed(() => !!f.value?.interval_80 && forecastDays.value.length > 0 && !isOngoing.value);
 
-const isLate = computed(() => !isOngoing.value && (!!f.value?.is_late || (ctx.value?.days_until_next_period ?? 1) < 0));
-const daysLate = computed(() => {
-  const n = ctx.value?.days_until_next_period;
-  if (typeof n === 'number' && n < 0) return -n;
-  // is_late from the forecast: measured against the usual cycle length
-  return Math.max(1, dayNumber.value - Math.round(ctx.value?.cycle_length || 28));
+const overdue = computed(() => (isLate.value && todayIdx.value > baseLength.value ? { start: baseLength.value, end: todayIdx.value } : null));
+
+const rangeLabels = computed(() => {
+  const r = f.value?.interval_80;
+  if (!hasForecast.value || !r) return [];
+  const bt = formatBetween(r.start, r.end, locale.value);
+  const out: { idx: number; text: string }[] = [];
+  if (r80StartIdx.value !== null && r80StartIdx.value > todayIdx.value) out.push({ idx: r80StartIdx.value, text: bt?.a ?? formatShort(r.start, locale.value) });
+  if (r80EndIdx.value !== null && r80EndIdx.value !== r80StartIdx.value) out.push({ idx: r80EndIdx.value, text: bt?.b ?? formatShort(r.end, locale.value) });
+  return out;
 });
 
-const dateLabel = computed(() => t('today.eyebrow', { date: formatDay(today, locale.value) }));
-const bigLine = computed(() => t('today.dayN', { n: dayNumber.value }));
+// ---- words: the hero answers "when?" ----
+const dateLine = computed(() => t('today.dateLine', { date: formatDay(today, locale.value) }));
 
-const subLine = computed(() => {
-  if (isOngoing.value) return avgPeriod.value ? t('today.periodUsually', { n: avgPeriod.value }) : null;
-  if (isLate.value) return t('today.lateBy', { count: daysLate.value }, daysLate.value);
-  const r80 = f.value?.interval_80;
-  if (r80) {
-    const range = formatRange(r80.start, r80.end, locale.value);
-    if (range) return `${t('today.likely', { range })} · ${t('today.likelyPct', { pct: 80 })}`;
+const hero = computed(() => {
+  if (isOngoing.value) return t('today.periodDayN', { n: dayNumber.value });
+  if (isLate.value) return t('today.daysLate', { count: daysLate.value }, daysLate.value);
+  if (hasForecast.value && r80StartIdx.value !== null && r80EndIdx.value !== null) {
+    const a = Math.max(0, r80StartIdx.value - todayIdx.value);
+    const b = Math.max(0, r80EndIdx.value - todayIdx.value);
+    const ml = Math.max(0, (mostLikelyIdx.value ?? r80StartIdx.value) - todayIdx.value);
+    if (b === 0) return t('today.periodAnyDay');
+    if (b - a > 7) return t('today.periodInAbout', { n: ml });
+    if (a === b) return t('today.periodInN', { n: a }, a);
+    if (a === 0) return t('today.periodWithin', { n: b });
+    return t('today.periodInRange', { range: `${a}–${b}` });
   }
+  return t('today.dayN', { n: dayNumber.value });
+});
+
+const sub = computed(() => {
+  if (isOngoing.value) return avgPeriod.value ? t('today.periodUsually', { n: avgPeriod.value }) : null;
+  if (isLate.value) return t('today.laterThanUsual');
+  const bt = formatBetween(f.value?.interval_80?.start, f.value?.interval_80?.end, locale.value);
+  if (hasForecast.value && bt) return t('today.between', { pct: 80, a: bt.a, b: bt.b });
   return t('today.needMore');
 });
-const subLine2 = computed(() => {
-  if (isLate.value && f.value?.probability_next_3_days != null) {
-    return t('today.next3', { pct: Math.round(f.value.probability_next_3_days * 100) });
-  }
-  return null;
-});
-const confidence = computed(() => {
+const sub2 = computed(() => {
   if (isOngoing.value) return null;
-  const key = f.value?.confidence ?? 'learning';
-  return t(`forecast.confidence.${key}`);
+  if (isLate.value) {
+    const p = f.value?.probability_next_3_days;
+    return p != null ? t('today.next3', { pct: Math.round(p * 100) }) : null;
+  }
+  return t(`forecast.confidence.${f.value?.confidence ?? 'learning'}`);
 });
 
+defineExpose({ isLate });
 const buttonText = computed(() => (isOngoing.value ? t('periodForm.endCurrent.button') : t('periodForm.recordNew.button')));
 const busy = computed(() => periodsStore.loading);
 
@@ -123,38 +152,35 @@ async function act() {
     <CycleRing
         :length="isEmpty ? 28 : length"
         :today-idx="isEmpty ? null : todayIdx"
+        :day-label="isEmpty ? '' : $t('today.dayChip', { n: dayNumber })"
         :period-days="periodDays"
         :period-expected-extra="extraDays"
-        :fertile="isEmpty ? null : fertile"
-        :ovulation-idx="isEmpty ? null : ovulationIdx"
+        :fertile="fertile"
+        :fertile-past="fertilePast"
         :forecast="hasForecast ? forecastDays : []"
-        :most-likely-idx="hasForecast ? mostLikelyIdx : null"
+        :range-labels="rangeLabels"
+        :overdue="overdue"
         :empty="isEmpty">
       <template v-if="isEmpty">
         <h1 id="today-title" class="font-display text-title leading-tight">{{ $t('today.emptyTitle') }}</h1>
         <p class="mt-2 text-sm text-ink-soft leading-snug">{{ $t('today.emptyBody') }}</p>
       </template>
       <template v-else>
-        <p class="text-[0.8125rem] text-ink-soft">{{ dateLabel }}</p>
-        <h1 id="today-title" class="display-number mt-1" style="font-size: clamp(2.6rem, 14vw, 3.4rem)">{{ bigLine }}</h1>
-        <p v-if="subLine" class="mt-2.5 text-[0.9375rem] leading-snug text-ink font-medium text-balance">{{ subLine }}</p>
-        <p v-if="subLine2" class="mt-1 text-[0.8125rem] leading-snug text-ink-soft text-balance">{{ subLine2 }}</p>
-        <p v-if="isOngoing" class="mt-2.5"><span class="phase-chip">{{ $t('today.legendPeriod') }}</span></p>
-        <p v-if="confidence" class="mt-2 text-xs text-ink-soft inline-flex items-center gap-1.5">
-          <span class="inline-block h-1.5 w-1.5 rounded-full bg-ink-soft/60"></span>{{ confidence }}
-        </p>
+        <p class="text-[0.8125rem] text-ink-soft">{{ dateLine }}</p>
+        <h1 id="today-title" class="hero-line mt-2">{{ hero }}</h1>
+        <p v-if="sub" class="mt-2.5 text-[0.9375rem] leading-snug text-ink text-balance">{{ sub }}</p>
+        <p v-if="sub2" class="mt-1.5 text-[0.8125rem] leading-snug text-ink-soft text-balance">{{ sub2 }}</p>
       </template>
     </CycleRing>
 
-    <div v-if="!isEmpty" class="mt-3 flex flex-wrap justify-center gap-x-5 gap-y-1.5 text-xs text-ink-soft">
+    <div v-if="!isEmpty" class="mt-1 flex flex-wrap justify-center gap-x-5 gap-y-1.5 text-xs text-ink-soft">
       <span class="inline-flex items-center gap-1.5"><span class="legend-dot" style="background: var(--color-period)"></span>{{ $t('today.legendPeriod') }}</span>
-      <span v-if="fertile" class="inline-flex items-center gap-1.5"><span class="legend-dot" style="background: var(--color-fertile); opacity: .45"></span>{{ $t('today.legendFertile') }}</span>
-      <span v-if="hasForecast" class="inline-flex items-center gap-1.5"><span class="legend-fuzz"></span>{{ $t('today.legendPredicted') }}</span>
+      <span v-if="fertile" class="inline-flex items-center gap-1.5"><span class="legend-bar"></span>{{ $t('today.legendFertile') }}</span>
+      <span v-if="hasForecast" class="inline-flex items-center gap-1.5"><span class="legend-bubbles"><i></i><i></i><i></i></span>{{ $t('today.legendForecast') }}</span>
     </div>
-    <p v-if="hasForecast" class="mt-2 text-center text-xs text-ink-soft max-w-[18rem] mx-auto text-balance">{{ $t('today.predictedDesc') }}</p>
 
     <div class="mt-5 px-1">
-      <button @click="act" :disabled="busy" class="btn btn-primary w-full" :class="{ 'is-ongoing': isOngoing }">
+      <button @click="act" :disabled="busy" class="btn btn-primary w-full">
         {{ isEmpty ? $t('dashboard.newUser.button') : buttonText }}
       </button>
     </div>
@@ -162,10 +188,21 @@ async function act() {
 </template>
 
 <style scoped>
-.legend-dot { display: inline-block; width: .55rem; height: .55rem; border-radius: 9999px; }
-.legend-fuzz {
-  display: inline-block; width: 1.15rem; height: .55rem; border-radius: 9999px;
-  background: linear-gradient(90deg, transparent, var(--color-period) 55%, transparent);
-  opacity: .8;
+.hero-line {
+  font-family: var(--font-display);
+  font-variation-settings: "SOFT" 70, "opsz" 96;
+  font-weight: 560;
+  font-size: clamp(1.7rem, 8.4vw, 2.2rem);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  color: var(--color-ink);
 }
+.legend-dot { display: inline-block; width: .6rem; height: .6rem; border-radius: 9999px; }
+.legend-bar { display: inline-block; width: 1.1rem; height: .3rem; border-radius: 9999px; background: var(--color-fertile); }
+.legend-bubbles { display: inline-flex; align-items: center; gap: 2px; }
+.legend-bubbles i { display: block; border-radius: 9999px; border: 1.4px solid var(--color-period); background: color-mix(in srgb, var(--color-period) 45%, transparent); }
+.legend-bubbles i:nth-child(1) { width: 5px; height: 5px; opacity: .6; }
+.legend-bubbles i:nth-child(2) { width: 9px; height: 9px; }
+.legend-bubbles i:nth-child(3) { width: 5px; height: 5px; opacity: .6; }
 </style>

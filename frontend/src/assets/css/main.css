@@ -21,18 +21,18 @@
  * LIGHT
  *   ink #2B2029 on background #FAF6F2 14.56 | on surface #FFF 15.66 | on surface-muted #F2EBE5 13.26
  *   ink-soft #665860 on background 6.24 | on surface 6.71 | on surface-muted 5.68
- *   on-primary #FFF on primary #7B2D5B 8.87 ; primary on background 8.25, on surface 8.87
- *   phase solid on surface (graphics / large text, >=3 needed): period #B8314F 5.85,
- *     fertile #2E6F5E 5.91, luteal #6A5C9E 5.77 ; white text on each solid phase: 5.85 / 5.91 / 5.77
- *   phase-ink on phase-soft: period #8F1F3A/#F6DDE0 6.74, fertile #1F5244/#D9ECE4 7.27,
+ *   on-primary #FFF on primary #A62A57 6.80 ; primary on background 6.32, on surface 6.80
+ *   phase solid on surface (graphics / large text, >=3 needed): period #C0305B 5.50,
+ *     fertile #2E6F5E 5.91, luteal #6A5C9E 5.77 ; white text on each solid phase: 5.50 / 5.91 / 5.77
+ *   phase-ink on phase-soft: period #8E1F46/#F8DEE5 6.97 (approx), fertile #1F5244/#D9ECE4 7.27,
  *     luteal #4F4380/#E6E1F2 6.71
  * DARK
  *   ink #F4ECEF on background #17121A 15.90 | on surface #221A25 14.56 | on surface-muted #2D2431 12.85
  *   ink-soft #B5A6B0 on background 7.95 | on surface 7.28 | on surface-muted 6.42
- *   on-primary #2A0F20 on primary #E58FBF 7.59 ; primary on background 7.92, on surface 7.25
- *   phase solid on surface: period #F07A94 6.37, fertile #6CCBAE 8.69, luteal #B3A6EA 7.69;
- *     on-phase #17121A text on each solid: 6.96 / 9.48 / 8.40
- *   phase-ink on phase-soft: period #FFB3C2/#4A2230 7.99, fertile #A5E6D2/#1F3A33 8.68,
+ *   on-primary #2A0F1B on primary #F28BA8 7.64 ; primary on background 7.94, on surface 7.27
+ *   phase solid on surface: period #F28BA8 7.27, fertile #7FD6B9 9.84, luteal #B3A6EA 7.69;
+ *     on-phase #17121A text on each solid: 7.94 / 9.48+ / 8.40
+ *   phase-ink on phase-soft: period #FFB6C8/#4A2230 8.18, fertile #A8E8D3/#1F3A33 ~8.7,
  *     luteal #D2C9F6/#33294F 8.55
  * Danger/success pairs below were verified at >= 4.5 as well (see ratios inline).
  */
@@ -63,16 +63,16 @@
     --color-ink-soft: #665860;
 
     /* brand */
-    --color-primary: #7B2D5B;
-    --color-primary-hover: #64234A;
+    --color-primary: #A62A57;
+    --color-primary-hover: #8C2148;
     --color-on-primary: #FFFFFF;
-    --color-primary-soft: #F3E3EC;
+    --color-primary-soft: #F8E2EA;
     --color-secondary: var(--color-line-strong);
 
     /* phases */
-    --color-period: #B8314F;
-    --color-period-soft: #F6DDE0;
-    --color-period-ink: #8F1F3A;
+    --color-period: #C0305B;
+    --color-period-soft: #F8DEE5;
+    --color-period-ink: #8E1F46;
     --color-fertile: #2E6F5E;
     --color-fertile-soft: #D9ECE4;
     --color-fertile-ink: #1F5244;
@@ -106,17 +106,17 @@
         --color-ink: #F4ECEF;
         --color-ink-soft: #B5A6B0;
 
-        --color-primary: #E58FBF;
-        --color-primary-hover: #F0A8CE;
-        --color-on-primary: #2A0F20;
-        --color-primary-soft: #3A2234;
+        --color-primary: #F28BA8;
+        --color-primary-hover: #F6A4BB;
+        --color-on-primary: #2A0F1B;
+        --color-primary-soft: #3F2230;
 
-        --color-period: #F07A94;
+        --color-period: #F28BA8;
         --color-period-soft: #4A2230;
-        --color-period-ink: #FFB3C2;
-        --color-fertile: #6CCBAE;
+        --color-period-ink: #FFB6C8;
+        --color-fertile: #7FD6B9;
         --color-fertile-soft: #1F3A33;
-        --color-fertile-ink: #A5E6D2;
+        --color-fertile-ink: #A8E8D3;
         --color-luteal: #B3A6EA;
         --color-luteal-soft: #33294F;
         --color-luteal-ink: #D2C9F6;

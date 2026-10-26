@@ -282,32 +282,18 @@ export default defineConfig({
                 ],
                 screenshots: [
                     {
-                        src: "/assets/screenshots/mobile-dashboard.png",
-                        sizes: "375x667",
+                        src: "/assets/screenshots/manifest-mobile.png",
+                        sizes: "780x1688",
                         type: "image/png",
                         form_factor: "narrow",
-                        label: "Mobile"
+                        label: "Today: your cycle and forecast"
                     },
                     {
-                        src: "/assets/screenshots/dashboard.png",
-                        sizes: "1440x900",
-                        type: "image/png",
-                        form_factor: "narrow",
-                        label: "Mobile"
-                    },
-                    {
-                        src: "/assets/screenshots/mobile-dashboard.png",
-                        sizes: "375x667",
+                        src: "/assets/screenshots/manifest-desktop.png",
+                        sizes: "1280x820",
                         type: "image/png",
                         form_factor: "wide",
-                        label: "Desktop"
-                    },
-                    {
-                        src: "/assets/screenshots/dashboard.png",
-                        sizes: "1440x900",
-                        type: "image/png",
-                        form_factor: "wide",
-                        label: "Desktop"
+                        label: "Calendar with predicted days"
                     }
                 ],
             }
@@ -341,6 +327,23 @@ export default defineConfig({
                 changeOrigin: true,
             },
             '/health': {
+                target: 'http://127.0.0.1:5000',
+                changeOrigin: true,
+            },
+            '/events': {
+                target: 'http://127.0.0.1:5000',
+                changeOrigin: true,
+            },
+            '/share': {
+                target: 'http://127.0.0.1:5000',
+                changeOrigin: true,
+            },
+            '/ha': {
+                target: 'http://127.0.0.1:5000',
+                changeOrigin: true,
+            },
+            // only the .ics feed: /calendar itself is an SPA route
+            '^/calendar/.+\\.ics$': {
                 target: 'http://127.0.0.1:5000',
                 changeOrigin: true,
             },

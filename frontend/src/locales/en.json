@@ -20,57 +20,153 @@
     "openSource": "This project is open source"
   },
   "homepage": {
+    "nav": {
+      "features": "Features",
+      "privacy": "Privacy",
+      "faq": "FAQ",
+      "getStarted": "Get started",
+      "menu": "Menu"
+    },
     "hero": {
-      "title": "Understand your cycle,",
-      "titleHighlight": "Empower your life.",
-      "subtitle": "Track your period, predict fertile windows, gain insights into your unique patterns, and sync with your body's natural rhythm effortlessly.",
-      "buttons": {
-        "register": "Start tracking for free"
+      "eyebrow": "Free · Open source · No ads",
+      "title": "Know when it's coming.",
+      "titleHighlight": "Honestly.",
+      "subtitle": "A calm, private period tracker that gives you a real forecast: the days your period will most likely start, and how sure it is. Not one made-up date.",
+      "primary": "Start tracking for free",
+      "secondary": "Log in",
+      "note": "Works in your browser and installs on your phone like an app.",
+      "todayAlt": "The Today screen: a cycle ring at day 13 with the text 'Period in 15 to 19 days, 80% likely between 10 and 14 Nov'.",
+      "calendarAlt": "The calendar: logged period days in solid red, predicted days shaded by how likely they are, fertile days in green."
+    },
+    "pillars": {
+      "title": "A tracker that doesn't pretend",
+      "subtitle": "Most apps show one confident date and hope for the best. Bodies vary, so this one shows you how sure it is, in plain language.",
+      "honest": {
+        "title": "Forecasts with a confidence level",
+        "text": "See the days your period will most likely start and how likely that is. The range gets tighter as you log more cycles."
+      },
+      "private": {
+        "title": "Private by design",
+        "text": "No ads, no trackers, and your data is never sold. Sharing is always opt-in, through private links you can reset or turn off."
+      },
+      "plans": {
+        "title": "Made for real plans",
+        "text": "Ask whether your period will fall on a holiday, a race or a wedding, and get a straight answer."
       }
     },
     "features": {
-      "title": "Everything you need",
-      "subtitle": "From simple logging to powerful insights, we've got you covered.",
-      "cards": {
-        "tracking": {
-          "title": "Effortless tracking",
-          "description": "Quickly log your period start and end dates. Simple and intuitive."
-        },
-        "predictions": {
-          "title": "Smart predictions",
-          "description": "See your predicted fertile window, ovulation day, and next period."
-        },
-        "insights": {
-          "title": "Personalized insights",
-          "description": "Discover your average cycle length, period duration, and unique patterns."
-        }
+      "today": {
+        "eyebrow": "Today",
+        "title": "Your whole cycle at a glance",
+        "text": "One ring shows where you are in your cycle, when your fertile days are, and when your next period is likely. One tap logs that it started.",
+        "p1": "Cycle day and phase, right away",
+        "p2": "Likely start window with a stated chance",
+        "p3": "Average cycle and period length, with your typical range"
+      },
+      "calendar": {
+        "eyebrow": "Calendar",
+        "title": "Predictions that look like predictions",
+        "text": "Logged days are solid. Predicted days are shaded by how likely they are, so you can tell a fact from a forecast without reading the small print.",
+        "p1": "Possible bleeding days, from faint to strong",
+        "p2": "Fertile window and likely ovulation",
+        "p3": "Tap any day to see what's known about it"
+      },
+      "plan": {
+        "eyebrow": "Plan",
+        "title": "“Will I have my period on…?”",
+        "text": "Pick a day or a trip and get a real percentage, with the chance of bleeding for each day. Save your plans and check back any time.",
+        "p1": "One clear chance for any dates you pick",
+        "p2": "Day-by-day bars, from unlikely to likely",
+        "p3": "Saved plans for holidays, races and big days",
+        "alt": "The Plan screen: a 53% chance of a period between 5 and 11 Nov, with a bar for each day."
+      },
+      "history": {
+        "eyebrow": "History",
+        "title": "See your own pattern",
+        "text": "Every cycle lined up at day 1, newest first, against your typical range. Spot a long or short cycle without doing any maths.",
+        "p1": "Period and fertile days for every cycle",
+        "p2": "Your typical range as a shaded band",
+        "p3": "Longer or shorter cycles are labelled for you",
+        "alt": "The history screen: past cycles as horizontal bars, each labelled 'Typical for you' or 'Longer than usual'."
       }
     },
-    "benefits": {
-      "title": "Connect with your body",
-      "subtitle": "Go beyond tracking. Understand the 'why' behind your cycle.",
-      "items": {
-        "plan": {
-          "title": "Plan ahead with confidence",
-          "description": "Know when to expect your period and fertile days, making it easier to plan events, trips, or intimacy."
-        },
-        "wellbeing": {
-          "title": "Tune into your wellbeing",
-          "description": "Notice patterns in your energy, mood, and physical symptoms throughout your cycle to better support your overall health."
-        }
+    "extras": {
+      "title": "Fits into the rest of your life",
+      "subtitle": "Optional extras. Each one stays off until you turn it on.",
+      "calendar": {
+        "title": "In your own calendar",
+        "text": "Predicted days in Google, Apple or Outlook Calendar, with a discreet label: just a moon by default."
+      },
+      "partner": {
+        "title": "A heads-up for your partner",
+        "text": "A private link that tells someone a period is coming soon. Never your history, dates or notes."
+      },
+      "doctor": {
+        "title": "A report for your doctor",
+        "text": "A clear, printable summary of your cycles to bring to an appointment."
+      },
+      "app": {
+        "title": "Install it like an app",
+        "text": "Add it to your home screen on iPhone or Android. No app store, no account with anyone else."
+      },
+      "home": {
+        "title": "Home Assistant and webhooks",
+        "text": "Let your smart home know when a period starts or is on its way."
+      },
+      "theme": {
+        "title": "Light, dark, English and Dutch",
+        "text": "Easy on the eyes at night, and in your own language."
       }
     },
-    "peek": {
-      "title": "Simple, Visual, Insightful",
-      "subtitle": "Get a clear view of your cycle at a glance with our intuitive dashboard."
+    "privacy": {
+      "eyebrow": "Privacy",
+      "title": "Your cycle is your business",
+      "text": "Period data is some of the most personal data there is. This app is built around that, not bolted on afterwards.",
+      "p1": "No ads, no analytics, no third-party trackers",
+      "p2": "Your data is never sold or handed over to advertisers",
+      "p3": "Every share link is opt-in and can be reset or switched off",
+      "p4": "Delete your account and all your data whenever you like",
+      "selfTitle": "Prefer to host it yourself?",
+      "selfText": "The code is open source under the Apache 2.0 licence. Run your own copy with Docker, on Railway or on Kubernetes: your server, your data.",
+      "selfLink": "View the code on GitHub"
+    },
+    "faq": {
+      "title": "Questions you might have",
+      "free": {
+        "q": "Is it really free?",
+        "a": "Yes. There is no paid plan, no ads and no data selling. Because the code is open source, you can also run your own copy."
+      },
+      "accuracy": {
+        "q": "How accurate are the predictions?",
+        "a": "Every forecast comes with a range and a stated chance, like “80% likely between 10 and 14 Nov”. The more cycles you log, the better it knows you. The forecast has been tested on simulated cycles, not on real people's data, so instead of big accuracy promises you get the uncertainty, shown plainly."
+      },
+      "irregular": {
+        "q": "What if my cycles are irregular?",
+        "a": "That's fine. The forecast learns your own pattern and shows a wider range when your cycles vary more. If a period is late, it says so instead of quietly moving the date."
+      },
+      "contraception": {
+        "q": "Can I use it as birth control?",
+        "a": "No. The fertile window is a calendar estimate. It isn't contraception or conception advice."
+      },
+      "data": {
+        "q": "Who can see my data?",
+        "a": "Only you, unless you create a share link. Partner and calendar links show only what you choose, and you can reset or stop them at any time."
+      },
+      "phone": {
+        "q": "Does it work on my phone?",
+        "a": "Yes. It runs in any modern browser, and you can add it to your home screen on iPhone and Android so it opens like an app."
+      }
     },
     "cta": {
-      "title": "Ready to discover your rhythm?",
-      "subtitle": "Join the women taking control of their cycle health. It's free!",
-      "buttons": {
-        "register": "Sign up now",
-        "dashboard": "View your dashboard"
-      }
+      "title": "Start with your last period",
+      "subtitle": "Sign up in under a minute and log when your last period started. Your forecast gets sharper with every cycle.",
+      "button": "Create a free account"
+    },
+    "footer": {
+      "tagline": "A calm, honest and private period tracker.",
+      "madeBy": "Made by",
+      "source": "Source code",
+      "license": "Apache 2.0 licence"
     }
   },
   "login": {

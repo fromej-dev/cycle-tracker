@@ -7,7 +7,8 @@ const repoUrl = 'https://github.com/fromej-dev/cycle-tracker'
     <div class="mx-auto max-w-6xl px-4 sm:px-6 py-10 flex flex-col sm:flex-row gap-6 sm:items-center sm:justify-between">
       <div>
         <div class="flex gap-2.5 items-center font-display text-lg text-primary">
-          <img src="/assets/icons/180_tp.png" alt="" class="h-7 w-7 rounded-[25%]">
+          <img src="/assets/icons/180_tp.png" alt="" class="h-7 w-7 rounded-[25%] dark:hidden">
+          <img src="/assets/icons/180_tp_dark.png" alt="" class="h-7 w-7 rounded-[25%] hidden dark:block">
           {{ $t('common.title') }}
         </div>
         <p class="text-ink-soft text-sm mt-2">{{ $t('homepage.footer.tagline') }}</p>

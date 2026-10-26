@@ -20,57 +20,153 @@
     "openSource": "Dit project is open source"
   },
   "homepage": {
+    "nav": {
+      "features": "Functies",
+      "privacy": "Privacy",
+      "faq": "Vragen",
+      "getStarted": "Begin nu",
+      "menu": "Menu"
+    },
     "hero": {
-      "title": "Begrijp je cyclus,",
-      "titleHighlight": "Versterk je leven.",
-      "subtitle": "Houd je menstruatie bij, voorspel vruchtbare periodes, krijg inzicht in jouw unieke patronen en synchroniseer moeiteloos met het natuurlijke ritme van je lichaam.",
-      "buttons": {
-        "register": "Start gratis met tracken"
+      "eyebrow": "Gratis · Open source · Geen advertenties",
+      "title": "Weet wanneer hij komt.",
+      "titleHighlight": "Eerlijk.",
+      "subtitle": "Een rustige, privé menstruatie-app met een echte voorspelling: de dagen waarop je menstruatie waarschijnlijk begint, en hoe zeker dat is. Geen verzonnen datum.",
+      "primary": "Begin gratis",
+      "secondary": "Inloggen",
+      "note": "Werkt in je browser en zet je als app op je telefoon.",
+      "todayAlt": "Het scherm Vandaag: een cyclusring op dag 13 met de tekst 'Menstruatie over 15 tot 19 dagen, 80% kans tussen 10 en 14 nov'.",
+      "calendarAlt": "De kalender: gelogde menstruatiedagen in effen rood, voorspelde dagen gearceerd naar waarschijnlijkheid, vruchtbare dagen in groen."
+    },
+    "pillars": {
+      "title": "Een app die niet doet alsof",
+      "subtitle": "De meeste apps tonen één stellige datum en hopen er het beste van. Elk lichaam is anders, dus deze app laat in gewone taal zien hoe zeker hij is.",
+      "honest": {
+        "title": "Voorspellingen met een zekerheid",
+        "text": "Zie op welke dagen je menstruatie waarschijnlijk begint en hoe groot die kans is. Hoe meer cycli je logt, hoe smaller de marge."
+      },
+      "private": {
+        "title": "Privé vanaf het begin",
+        "text": "Geen advertenties, geen trackers, en je gegevens worden nooit verkocht. Delen doe je alleen als jij dat wilt, via privélinks die je kunt resetten of uitzetten."
+      },
+      "plans": {
+        "title": "Gemaakt voor echte plannen",
+        "text": "Vraag of je ongesteld bent tijdens een vakantie, een hardloopwedstrijd of een bruiloft, en krijg een duidelijk antwoord."
       }
     },
     "features": {
-      "title": "Alles wat je nodig hebt",
-      "subtitle": "Van eenvoudig loggen tot krachtige inzichten, wij helpen je.",
-      "cards": {
-        "tracking": {
-          "title": "Moeiteloos tracken",
-          "description": "Log snel de start- en einddatum van je menstruatie. Eenvoudig en intuïtief."
-        },
-        "predictions": {
-          "title": "Slimme voorspellingen",
-          "description": "Bekijk je voorspelde vruchtbare periode, ovulatiedag en volgende menstruatie."
-        },
-        "insights": {
-          "title": "Gepersonaliseerde inzichten",
-          "description": "Ontdek je gemiddelde cycluslengte, menstruatieduur en unieke patronen."
-        }
+      "today": {
+        "eyebrow": "Vandaag",
+        "title": "Je hele cyclus in één oogopslag",
+        "text": "Eén ring laat zien waar je in je cyclus bent, wanneer je vruchtbare dagen zijn en wanneer je volgende menstruatie waarschijnlijk komt. Met één tik log je dat hij begonnen is.",
+        "p1": "Cyclusdag en fase, meteen zichtbaar",
+        "p2": "Waarschijnlijke startdagen met een duidelijke kans",
+        "p3": "Gemiddelde cyclus- en menstruatieduur, met je normale spreiding"
+      },
+      "calendar": {
+        "eyebrow": "Kalender",
+        "title": "Voorspellingen die er ook zo uitzien",
+        "text": "Gelogde dagen zijn effen. Voorspelde dagen zijn gearceerd naar hoe waarschijnlijk ze zijn, zodat je een feit meteen onderscheidt van een voorspelling.",
+        "p1": "Mogelijke bloedingsdagen, van licht tot sterk",
+        "p2": "Vruchtbare periode en waarschijnlijke ovulatie",
+        "p3": "Tik op een dag om te zien wat er bekend is"
+      },
+      "plan": {
+        "eyebrow": "Plannen",
+        "title": "“Ben ik ongesteld op…?”",
+        "text": "Kies een dag of een reis en krijg een echt percentage, met de kans op bloeding per dag. Bewaar je plannen en kijk later nog eens.",
+        "p1": "Eén duidelijke kans voor de dagen die jij kiest",
+        "p2": "Staafjes per dag, van onwaarschijnlijk tot waarschijnlijk",
+        "p3": "Bewaarde plannen voor vakanties, wedstrijden en grote dagen",
+        "alt": "Het scherm Plannen: 53% kans op menstruatie tussen 5 en 11 nov, met een staafje per dag."
+      },
+      "history": {
+        "eyebrow": "Geschiedenis",
+        "title": "Zie je eigen patroon",
+        "text": "Elke cyclus op dag 1 uitgelijnd, nieuwste eerst, naast je normale spreiding. Zie een lange of korte cyclus zonder te rekenen.",
+        "p1": "Menstruatie- en vruchtbare dagen per cyclus",
+        "p2": "Je normale spreiding als gearceerde band",
+        "p3": "Langere of kortere cycli worden voor je gemarkeerd",
+        "alt": "Het geschiedenisscherm: eerdere cycli als horizontale balken, elk gemarkeerd als normaal of langer dan normaal."
       }
     },
-    "benefits": {
-      "title": "Maak verbinding met je lichaam",
-      "subtitle": "Ga verder dan alleen tracken. Begrijp het 'waarom' achter je cyclus.",
-      "items": {
-        "plan": {
-          "title": "Plan vooruit met vertrouwen",
-          "description": "Weet wanneer je je menstruatie en vruchtbare dagen kunt verwachten, zodat je gemakkelijker evenementen, reizen of intimiteit kunt plannen."
-        },
-        "wellbeing": {
-          "title": "Stem af op je welzijn",
-          "description": "Merk patronen op in je energie, stemming en fysieke symptomen tijdens je cyclus om je algehele gezondheid beter te ondersteunen."
-        }
+    "extras": {
+      "title": "Past in de rest van je leven",
+      "subtitle": "Optionele extra's. Ze staan allemaal uit tot jij ze aanzet.",
+      "calendar": {
+        "title": "In je eigen agenda",
+        "text": "Voorspelde dagen in Google, Apple of Outlook Agenda, met een onopvallend label: standaard alleen een maantje."
+      },
+      "partner": {
+        "title": "Een seintje voor je partner",
+        "text": "Een privélink die iemand laat weten dat je menstruatie eraan komt. Nooit je geschiedenis, datums of notities."
+      },
+      "doctor": {
+        "title": "Een verslag voor je arts",
+        "text": "Een duidelijk, printbaar overzicht van je cycli om mee te nemen naar een afspraak."
+      },
+      "app": {
+        "title": "Installeer het als app",
+        "text": "Zet het op je beginscherm op iPhone of Android. Geen app store, geen account bij een ander bedrijf."
+      },
+      "home": {
+        "title": "Home Assistant en webhooks",
+        "text": "Laat je slimme huis weten wanneer je menstruatie begint of eraan komt."
+      },
+      "theme": {
+        "title": "Licht, donker, Nederlands en Engels",
+        "text": "Prettig voor je ogen in de avond, en in je eigen taal."
       }
     },
-    "peek": {
-      "title": "Eenvoudig, Visueel, Inzichtelijk",
-      "subtitle": "Krijg in één oogopslag een duidelijk beeld van je cyclus met ons intuïtieve dashboard."
+    "privacy": {
+      "eyebrow": "Privacy",
+      "title": "Je cyclus gaat niemand iets aan",
+      "text": "Menstruatiegegevens zijn een van de meest persoonlijke dingen die er zijn. Deze app is daaromheen gebouwd, niet achteraf aangepast.",
+      "p1": "Geen advertenties, geen analytics, geen trackers van derden",
+      "p2": "Je gegevens worden nooit verkocht of aan adverteerders gegeven",
+      "p3": "Elke deellink zet je zelf aan en kun je resetten of uitzetten",
+      "p4": "Verwijder je account en al je gegevens wanneer je wilt",
+      "selfTitle": "Liever zelf hosten?",
+      "selfText": "De code is open source onder de Apache 2.0-licentie. Draai je eigen versie met Docker, op Railway of op Kubernetes: jouw server, jouw gegevens.",
+      "selfLink": "Bekijk de code op GitHub"
+    },
+    "faq": {
+      "title": "Vragen die je misschien hebt",
+      "free": {
+        "q": "Is het echt gratis?",
+        "a": "Ja. Er is geen betaald abonnement, er zijn geen advertenties en er worden geen gegevens verkocht. Omdat de code open source is, kun je ook je eigen versie draaien."
+      },
+      "accuracy": {
+        "q": "Hoe nauwkeurig zijn de voorspellingen?",
+        "a": "Elke voorspelling heeft een marge en een kans, zoals “80% kans tussen 10 en 14 nov”. Hoe meer cycli je logt, hoe beter de app je kent. De voorspelling is getest op gesimuleerde cycli, niet op gegevens van echte mensen. Daarom krijg je geen grote beloftes, maar zie je de onzekerheid gewoon staan."
+      },
+      "irregular": {
+        "q": "Wat als mijn cyclus onregelmatig is?",
+        "a": "Geen probleem. De voorspelling leert jouw eigen patroon en toont een bredere marge als je cycli meer verschillen. Ben je laat, dan zegt de app dat in plaats van stilletjes de datum te verschuiven."
+      },
+      "contraception": {
+        "q": "Kan ik het als anticonceptie gebruiken?",
+        "a": "Nee. De vruchtbare periode is een schatting op basis van de kalender. Het is geen advies over anticonceptie of zwanger worden."
+      },
+      "data": {
+        "q": "Wie kan mijn gegevens zien?",
+        "a": "Alleen jij, tenzij je een deellink maakt. Partner- en agendalinks tonen alleen wat jij kiest, en je kunt ze altijd resetten of stoppen."
+      },
+      "phone": {
+        "q": "Werkt het op mijn telefoon?",
+        "a": "Ja. Het werkt in elke moderne browser, en je kunt het op je beginscherm zetten op iPhone en Android zodat het opent als een app."
+      }
     },
     "cta": {
-      "title": "Klaar om je ritme te ontdekken?",
-      "subtitle": "Sluit je aan bij duizenden vrouwen die controle nemen over hun cyclusgezondheid. Het is gratis!",
-      "buttons": {
-        "register": "Meld je nu aan",
-        "dashboard": "Bekijk je dashboard"
-      }
+      "title": "Begin met je laatste menstruatie",
+      "subtitle": "Meld je in een minuut aan en log wanneer je laatste menstruatie begon. Met elke cyclus wordt je voorspelling scherper.",
+      "button": "Maak een gratis account"
+    },
+    "footer": {
+      "tagline": "Een rustige, eerlijke en privé menstruatie-app.",
+      "madeBy": "Gemaakt door",
+      "source": "Broncode",
+      "license": "Apache 2.0-licentie"
     }
   },
   "login": {

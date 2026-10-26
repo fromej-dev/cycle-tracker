@@ -2,7 +2,8 @@
   <header class="site-header sticky top-0 z-40 border-b border-line">
     <div class="mx-auto max-w-6xl px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
       <router-link :to="{ name: 'home' }" class="flex gap-2.5 items-center font-display text-lg text-primary shrink-0">
-        <img src="/assets/icons/180_tp.png" alt="" class="nav-image">
+        <img src="/assets/icons/180_tp.png" alt="" class="nav-image dark:hidden">
+        <img src="/assets/icons/180_tp_dark.png" alt="" class="nav-image hidden dark:block">
         {{ $t('common.title') }}
       </router-link>
 

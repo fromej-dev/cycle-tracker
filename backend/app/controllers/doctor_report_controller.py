@@ -1,3 +1,5 @@
+import datetime
+
 from apiflask import APIBlueprint
 from flask import Response, jsonify
 from flask_jwt_extended import current_user, jwt_required
@@ -6,6 +8,7 @@ from app.controllers.report_controller import client_today
 from app.models import Period
 from app.schemas.integrations import DoctorQuerySchema
 from app.services.doctor_report_service import DoctorReportService, jsonable
+from app.services.symptom_service import SymptomService
 
 doctor_bp = APIBlueprint("doctor_report", __name__, url_prefix="/reports")
 
@@ -16,12 +19,15 @@ def _build(query: dict) -> dict:
         .order_by(Period.start_date)
         .all()
     )
+    today = client_today(query) or datetime.date.today()
+    since = today - datetime.timedelta(days=round(query["months"] * 30.4375))
     return DoctorReportService.build(
         current_user,
         [(p.start_date, p.end_date) for p in rows],
         months=query["months"],
-        today=client_today(query),
+        today=today,
         include_name=query["include_name"],
+        symptoms=SymptomService.rows_for_report(current_user.id, since, today),
     )
 
 

@@ -33,6 +33,7 @@ OUT_OF_RANGE_MIN = 2  # flag if at least this many of the last LAST_N are outsid
 LONG_PERIOD_DAYS = 8
 NO_PERIOD_DAYS = 90
 MONTHS = (6, 12, 24)
+PREMENSTRUAL_DAYS = 7  # days before a period start counted as "before period"
 
 DISCLAIMER = (
     "This report summarises dates you logged yourself. It is not a diagnosis and "
@@ -64,6 +65,7 @@ class DoctorReportService:
         months: int = 12,
         today: datetime.date | None = None,
         include_name: bool = False,
+        symptoms: list[tuple[datetime.date, list[str]]] | None = None,
     ) -> dict:
         today = today or datetime.date.today()
         model = ForecastService.fit(periods, today)
@@ -154,6 +156,9 @@ class DoctorReportService:
         }
 
         flags = DoctorReportService._flags(cycles, used, last, stats, rows, today)
+        symptom_summary = DoctorReportService._symptoms(
+            symptoms or [], rows, since, today
+        )
         return {
             "generated": today,
             "range": {"from": since, "to": today, "months": months},
@@ -162,6 +167,7 @@ class DoctorReportService:
             "stats": stats,
             "flags": flags,
             "excluded_gaps": excluded,
+            "symptoms": symptom_summary,
             "reference": {
                 "band_days": [REF_LOW, REF_HIGH],
                 "figo_frequency_days": list(FIGO_FREQ),
@@ -169,6 +175,47 @@ class DoctorReportService:
                 "figo_duration_max_days": FIGO_DURATION_MAX,
             },
             "disclaimer": DISCLAIMER,
+        }
+
+    @staticmethod
+    def _symptoms(
+        logged: list[tuple[datetime.date, list[str]]],
+        rows: list[tuple[datetime.date, datetime.date | None]],
+        since: datetime.date,
+        today: datetime.date,
+    ) -> dict:
+        """How often each symptom was noted, and how many of those days fell during a
+        logged period or in the PREMENSTRUAL_DAYS before one started."""
+        during: set[datetime.date] = set()
+        before: set[datetime.date] = set()
+        for start, end in rows:
+            last = end or min(today, start + datetime.timedelta(days=13))
+            for i in range((last - start).days + 1):
+                during.add(start + datetime.timedelta(days=i))
+            for i in range(1, PREMENSTRUAL_DAYS + 1):
+                before.add(start - datetime.timedelta(days=i))
+        before -= during
+        tally: dict[str, dict] = {}
+        days = 0
+        for day, labels in logged:
+            if not since <= day <= today or not labels:
+                continue
+            days += 1
+            for label in labels:
+                t = tally.setdefault(
+                    label.casefold(),
+                    {"label": label, "days": 0, "during_period": 0, "before_period": 0},
+                )
+                t["days"] += 1
+                t["during_period"] += day in during
+                t["before_period"] += day in before
+        items = sorted(
+            tally.values(), key=lambda t: (-t["days"], t["label"].casefold())
+        )
+        return {
+            "days_logged": days,
+            "premenstrual_days": PREMENSTRUAL_DAYS,
+            "items": items,
         }
 
     @staticmethod
@@ -358,6 +405,23 @@ class DoctorReportService:
                 "than the usual cycle, so a period may not have been logged. They are "
                 f"not counted as cycles.</p><ul>{items}</ul>"
             )
+        sym = data.get("symptoms") or {"items": [], "days_logged": 0}
+        symptoms_html = ""
+        if sym["items"]:
+            srows = "".join(
+                f"<tr><td>{e(t['label'])}</td><td>{t['days']}</td>"
+                f"<td>{t['during_period']}</td><td>{t['before_period']}</td></tr>"
+                for t in sym["items"]
+            )
+            symptoms_html = (
+                "<h2>Symptoms</h2>"
+                f"<p>Noted on {sym['days_logged']} day(s) in this range. Counts are "
+                "days, as logged by the user.</p>"
+                "<table><thead><tr><th>Symptom</th><th>Days</th>"
+                "<th>During a period</th>"
+                f"<th>In the {sym['premenstrual_days']} days before a period</th>"
+                f"</tr></thead><tbody>{srows}</tbody></table>"
+            )
         chart = DoctorReportService.chart_svg(data)
         chart_html = (
             f"<h2>Cycle length over time</h2>{chart}"
@@ -413,6 +477,7 @@ duration up to {ref["figo_duration_max_days"]} days. Variability is flagged only
 <h2>Cycles</h2>
 <table><thead><tr><th>Period start</th><th>Period length (days)</th><th>Cycle length (days)</th></tr></thead>
 <tbody>{rows}</tbody></table>
+{symptoms_html}
 {excl}
 <p class="disclaimer"><strong>Not a diagnosis.</strong> {e(data["disclaimer"])}</p>
 </body></html>"""

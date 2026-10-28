@@ -5,9 +5,12 @@ import {
   addDays, addMonths, differenceInCalendarDays, endOfMonth, format, formatISO, isSameMonth, parseISO,
   startOfDay, startOfMonth, startOfWeek, subDays,
 } from 'date-fns';
-import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/outline';
+import { ChevronLeftIcon, ChevronRightIcon, PencilSquareIcon, PlusIcon } from '@heroicons/vue/24/outline';
 import CalendarDay from '@/components/CalendarDay.vue';
 import DaySheet, { type Fact } from '@/components/DaySheet.vue';
+import BottomSheet from '@/components/BottomSheet.vue';
+import SymptomPicker from '@/components/SymptomPicker.vue';
+import { useSymptomsStore } from '@/stores/symptoms';
 import { usePeriodsStore } from '@/stores/periods';
 import { useReportsStore } from '@/stores/reports';
 import { dateCheckApi } from '@/api/plan';
@@ -17,6 +20,7 @@ import { dfLocale, formatDay, formatBetween } from '@/utils/formatDate';
 const { t, locale } = useI18n();
 const periodsStore = usePeriodsStore();
 const reports = useReportsStore();
+const symptoms = useSymptomsStore();
 const { forecast, forecastEnd, reason, byDate, prob, fertileMap, lastCovered } = useCalendarForecast();
 
 const iso = (d: Date) => formatISO(d, { representation: 'date' });
@@ -122,6 +126,7 @@ const info = (c: Cell) => {
     far: !!forecastEnd.value && c.iso > forecastEnd.value,
     startWin: startWinOf(c),
     likelyStart: !lg && forecast.value?.most_likely_start === c.iso && !reason.value,
+    noted: symptoms.count(c.iso) > 0,
   };
 };
 
@@ -163,8 +168,19 @@ watch([month, forecastEnd], loadFar);
 watch(forecast, (n, o) => { if (o && n !== o) { fetched.clear(); clearExternalDays(); loadFar(); } });
 onMounted(loadFar);
 
+// symptoms for the shown months (never the future: nothing can be noted there yet)
+function loadSymptoms() {
+  const start = startOfMonth(month.value);
+  if (start > today) return;
+  const end = shownEnd.value < today ? shownEnd.value : today;
+  symptoms.fetchRange(iso(start), iso(end));
+}
+watch(month, loadSymptoms);
+onMounted(() => { loadSymptoms(); symptoms.fetchSuggestions(); });
+
 const beyond = computed(() => !reason.value && !!forecastEnd.value && shownEnd.value > parseISO(forecastEnd.value) && startOfMonth(month.value) <= addDays(today, MAX_DAYS));
 const beyondAll = computed(() => !reason.value && !!forecastEnd.value && startOfMonth(month.value) > addDays(today, MAX_DAYS));
+const hasNoted = computed(() => Object.values(symptoms.byDate).some((d) => d.symptoms.length + d.custom.length > 0));
 const hasFertile = computed(() => fertileMap.value.size > 0);
 const hasPred = computed(() => !reason.value && [...byDate.value.values()].some((v) => v.p_bleeding >= 0.18));
 
@@ -251,10 +267,29 @@ async function endHere() {
   if (!r) error.value = friendly(); else selected.value = null;
 }
 
+// ---- symptoms of the selected day ----
+const selSymptoms = computed(() => {
+  if (!selected.value) return [];
+  const d = symptoms.day(selected.value);
+  return [...d.symptoms.map((k) => t(`symptoms.items.${k}`)), ...d.custom];
+});
+const symptomsFor = ref<string | null>(null);
+const symptomsTitle = computed(() => (symptomsFor.value ? t('symptoms.calendar.sheetTitle', { date: formatDay(symptomsFor.value, locale.value, true) ?? '' }) : ''));
+function editSymptoms() {
+  symptomsFor.value = selected.value;
+  selected.value = null;
+}
+function closeSymptoms() {
+  const d = symptomsFor.value;
+  symptomsFor.value = null;
+  if (d) symptoms.flush(d);
+}
+
 const dayLabel = (c: Cell) => {
   const lg = loggedMap.value.get(c.iso);
   const pr = lg ? null : prob(c.iso);
-  const base = formatDay(c.iso, locale.value, true) ?? '';
+  const n = symptoms.count(c.iso);
+  const base = (formatDay(c.iso, locale.value, true) ?? '') + (n ? `, ${t('symptoms.calendar.count', { n }, n)}` : '');
   if (lg) return `${base}, ${t('calendar.facts.logged', { n: lg.day })}`;
   if (pr && pr.p_bleeding >= 0.18) return `${base}, ${t('calendar.facts.chance', { pct: pct(pr.p_bleeding) })}`;
   if (fertileMap.value.get(c.iso)) return `${base}, ${t('calendar.facts.fertile')}`;
@@ -313,6 +348,7 @@ const dayLabel = (c: Cell) => {
       <li v-if="hasFertile"><span class="sw-ov"></span>{{ $t('calendar.legend.ovulation') }}</li>
       <li v-if="hasPred"><span class="sw-win"></span>{{ $t('calendar.legend.window') }}</li>
       <li v-if="hasPred"><span class="sw-start"></span>{{ $t('calendar.legend.start') }}</li>
+      <li v-if="hasNoted"><span class="sw-noted"></span>{{ $t('calendar.legend.symptoms') }}</li>
       <li><span class="sw sw-today"></span>{{ $t('calendar.legend.today') }}</li>
     </ul>
     <p v-if="hasPred" class="mt-2 text-[0.75rem] leading-snug text-ink-soft">{{ $t('calendar.legend.hint') }}</p>
@@ -329,7 +365,22 @@ const dayLabel = (c: Cell) => {
         :close-label="$t('calendar.close')"
         @close="selected = null"
         @start="startHere"
-        @end="endHere" />
+        @end="endHere">
+      <div v-if="!isFutureSel" class="mt-4 border-t border-line pt-3.5">
+        <p class="eyebrow">{{ $t('symptoms.calendar.title') }}</p>
+        <p v-if="selSymptoms.length" class="mt-1.5 text-[0.9375rem] leading-snug">{{ selSymptoms.join(', ') }}</p>
+        <button type="button" class="sym-btn mt-2" @click="editSymptoms">
+          <PencilSquareIcon v-if="selSymptoms.length" class="h-4 w-4" aria-hidden="true" />
+          <PlusIcon v-else class="h-4 w-4" aria-hidden="true" />
+          {{ selSymptoms.length ? $t('symptoms.calendar.edit') : $t('symptoms.calendar.add') }}
+        </button>
+      </div>
+    </DaySheet>
+
+    <BottomSheet v-if="symptomsFor" :title="symptomsTitle" :close-label="$t('calendar.close')" @close="closeSymptoms">
+      <SymptomPicker :date="symptomsFor" />
+      <button type="button" class="btn btn-primary mt-4 w-full" @click="closeSymptoms">{{ $t('symptoms.done') }}</button>
+    </BottomSheet>
   </div>
 </template>
 
@@ -354,6 +405,8 @@ const dayLabel = (c: Cell) => {
 .sw-win { display: inline-block; width: 1.25rem; height: 3px; border-radius: 9999px; background: var(--color-period); }
 .sw-start { display: inline-block; width: .375rem; height: .375rem; border-radius: 9999px; background: var(--color-period); }
 .sw-today { border: 2px solid var(--color-ink); }
+.sw-noted { display: inline-block; width: .5rem; height: .5rem; border-radius: 9999px; background: var(--color-luteal); }
+.sym-btn { display: inline-flex; align-items: center; gap: .375rem; min-height: 2.75rem; padding: 0 1rem; border-radius: 9999px; font-size: .9375rem; font-weight: 600; color: var(--color-primary); background: var(--color-primary-soft); }
 
 @media (prefers-reduced-motion: no-preference) {
   .slide-next-enter-active, .slide-next-leave-active, .slide-prev-enter-active, .slide-prev-leave-active { transition: transform .2s ease, opacity .2s ease; }

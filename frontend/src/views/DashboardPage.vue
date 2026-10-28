@@ -15,6 +15,8 @@
 
       <TodayHero />
 
+      <SymptomsToday />
+
       <section v-if="reportsStore.periodStats?.count > 0" aria-labelledby="insights-heading" class="flex flex-col gap-4">
         <h2 id="insights-heading" class="section-title">{{ $t('dashboard.sections.insights.title') }}</h2>
         <div v-if="cycleHeadline !== '–' || periodHeadline !== '–'" class="grid grid-cols-2 items-end gap-6 border-y border-line py-5">
@@ -69,6 +71,7 @@ import PeriodList from '@/components/PeriodList.vue';
 import Skeleton from '@/components/Skeleton.vue';
 import CycleHistory from '@/components/CycleHistory.vue';
 import TodayHero from "@/components/TodayHero.vue";
+import SymptomsToday from "@/components/SymptomsToday.vue";
 import {computed, onMounted} from "vue";
 import FertileWindowCard from "@/components/FertileWindowCard.vue";
 import {usePeriodsStore} from "@/stores/periods";

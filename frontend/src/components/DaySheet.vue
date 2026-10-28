@@ -58,6 +58,8 @@ const panelStyle = computed(() => (dragY.value ? { transform: `translateY(${drag
         </li>
       </ul>
 
+      <slot />
+
       <p v-if="error" class="mt-3 rounded-2xl bg-danger-soft px-3.5 py-2.5 text-[0.8125rem] leading-snug text-danger-ink" role="alert">{{ error }}</p>
 
       <div v-if="canStart || canEnd" class="mt-4 flex flex-col gap-2">

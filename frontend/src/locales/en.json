@@ -465,7 +465,8 @@
       "today": "Today",
       "hint": "Dashed tiles are predictions, not records. The fainter the tile, the less likely.",
       "start": "Most likely start day",
-      "window": "Likely start window"
+      "window": "Likely start window",
+      "symptoms": "Symptoms noted"
     },
     "facts": {
       "logged": "Logged period day {n}",
@@ -723,6 +724,72 @@
       "rotateTitle": "Create a new secret?",
       "rotateMessage": "The old secret stops being valid. Update your receiver.",
       "privateHint": "Home-network URLs need ALLOW_PRIVATE_WEBHOOKS=1 on the server."
+    }
+  },
+  "symptoms": {
+    "done": "Done",
+    "usual": "Your usual ones",
+    "groups": {
+      "pain": "Pain",
+      "bleeding": "Bleeding & discharge",
+      "body": "Body",
+      "mood": "Mood & sleep"
+    },
+    "items": {
+      "cramps": "Cramps",
+      "headache": "Headache",
+      "migraine": "Migraine",
+      "back_pain": "Back pain",
+      "breast_tenderness": "Tender breasts",
+      "pelvic_pain": "Pelvic pain",
+      "ovulation_pain": "Ovulation pain",
+      "heavy_bleeding": "Heavy bleeding",
+      "spotting": "Spotting",
+      "discharge": "Discharge",
+      "bloating": "Bloating",
+      "digestion": "Bowel changes",
+      "nausea": "Nausea",
+      "fatigue": "Tired",
+      "cravings": "Cravings",
+      "acne": "Acne",
+      "dizziness": "Dizzy",
+      "hot_flashes": "Hot flashes / night sweats",
+      "mood_swings": "Mood swings",
+      "irritability": "Irritable",
+      "anxiety": "Anxious",
+      "low_mood": "Low mood",
+      "insomnia": "Slept badly",
+      "poor_focus": "Hard to focus"
+    },
+    "custom": {
+      "title": "Something else",
+      "label": "Your own symptom",
+      "placeholder": "Type a symptom, e.g. jaw pain",
+      "add": "Add symptom",
+      "remove": "Remove {name}",
+      "tooLong": "Keep it short: at most {n} characters.",
+      "full": "At most {n} own symptoms per day."
+    },
+    "status": {
+      "auto": "Saves by itself",
+      "saving": "Saving…",
+      "saved": "Saved",
+      "error": "Not saved.",
+      "retry": "Try again"
+    },
+    "today": {
+      "title": "How do you feel today?",
+      "hint": "Tap what you notice. Tap again to remove it.",
+      "more": "More or your own",
+      "sheetTitle": "Symptoms today",
+      "sheetTitleN": "Symptoms today ({n})"
+    },
+    "calendar": {
+      "title": "Symptoms",
+      "add": "Add symptoms",
+      "edit": "Change symptoms",
+      "sheetTitle": "Symptoms, {date}",
+      "count": "{n} symptom | {n} symptoms"
     }
   }
 }

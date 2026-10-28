@@ -25,6 +25,8 @@ interface Props {
   startWin?: 'only' | 'first' | 'mid' | 'last' | null;
   today?: boolean;
   selected?: boolean;
+  /** symptoms were noted on this day */
+  noted?: boolean;
   label?: string;
 }
 const props = withDefaults(defineProps<Props>(), { pBleeding: 0, fertile: 0 });
@@ -62,6 +64,7 @@ const style = computed(() => ({ '--s': strength.value.toFixed(3) }));
     <span class="num" :class="{ lifted: ovulation || (likelyStart && !logged) }">{{ day }}</span>
     <span v-if="ovulation" class="ov" aria-hidden="true"></span>
     <span v-if="likelyStart && !logged" class="start-dot" aria-hidden="true"></span>
+    <span v-if="noted" class="noted" aria-hidden="true"></span>
   </button>
 </template>
 
@@ -90,6 +93,8 @@ const style = computed(() => ({ '--s': strength.value.toFixed(3) }));
 /* ovulation: a real marker, a ring under the number */
 .ov { position: absolute; z-index: 2; bottom: 0.5rem; width: 0.6875rem; height: 0.6875rem; border-radius: 9999px; border: 2px solid var(--color-fertile); background: var(--color-surface); }
 .start-dot { position: absolute; z-index: 2; bottom: 0.5rem; width: 0.375rem; height: 0.375rem; border-radius: 9999px; background: var(--color-period); }
+/* symptoms noted: a small corner dot that reads on every tile kind */
+.noted { position: absolute; z-index: 3; top: 0.3125rem; right: 0.25rem; width: 0.5rem; height: 0.5rem; border-radius: 9999px; background: var(--color-luteal); box-shadow: 0 0 0 1.5px var(--color-surface); }
 
 .swin { position: absolute; z-index: 2; bottom: 0.125rem; height: 3px; left: 0; right: 0; background: var(--color-period); }
 .swin.w-only, .swin.w-first { left: 0.5rem; border-top-left-radius: 9999px; border-bottom-left-radius: 9999px; }

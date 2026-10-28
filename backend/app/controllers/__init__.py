@@ -12,6 +12,7 @@ from .integrations_controller import integrations_bp
 from .period_controller import period_bp
 from .report_controller import report_bp
 from .share_controller import share_bp
+from .symptom_controller import symptoms_bp
 from .users_controller import users_bp
 
 
@@ -25,6 +26,7 @@ def register_blueprints(app: Flask) -> None:
     app.register_blueprint(share_bp)
     app.register_blueprint(period_bp)
     app.register_blueprint(report_bp)
+    app.register_blueprint(symptoms_bp)
     app.register_blueprint(users_bp)
 
 

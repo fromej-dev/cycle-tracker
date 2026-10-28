@@ -74,6 +74,10 @@ class User(BaseModel):
         "PlannedEvent", back_populates="user", lazy=True, cascade="all, delete-orphan"
     )
 
+    symptom_logs = db.relationship(
+        "SymptomLog", back_populates="user", lazy=True, cascade="all, delete-orphan"
+    )
+
     def set_password(self, password: str) -> None:
         """Hashes and sets the user's password."""
         if not password:

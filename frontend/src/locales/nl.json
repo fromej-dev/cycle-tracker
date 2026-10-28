@@ -465,7 +465,8 @@
       "today": "Vandaag",
       "hint": "Gestippelde vlakken zijn voorspellingen, geen registraties. Hoe lichter, hoe minder waarschijnlijk.",
       "start": "Meest waarschijnlijke startdag",
-      "window": "Waarschijnlijke startperiode"
+      "window": "Waarschijnlijke startperiode",
+      "symptoms": "Klachten genoteerd"
     },
     "facts": {
       "logged": "Gelogde menstruatiedag {n}",
@@ -723,6 +724,72 @@
       "rotateTitle": "Nieuw geheim maken?",
       "rotateMessage": "Het oude geheim is niet meer geldig. Werk je ontvanger bij.",
       "privateHint": "URL's op je thuisnetwerk vereisen ALLOW_PRIVATE_WEBHOOKS=1 op de server."
+    }
+  },
+  "symptoms": {
+    "done": "Klaar",
+    "usual": "Vaak bij jou",
+    "groups": {
+      "pain": "Pijn",
+      "bleeding": "Bloedverlies & afscheiding",
+      "body": "Lichaam",
+      "mood": "Stemming & slaap"
+    },
+    "items": {
+      "cramps": "Buikkrampen",
+      "headache": "Hoofdpijn",
+      "migraine": "Migraine",
+      "back_pain": "Rugpijn",
+      "breast_tenderness": "Gevoelige borsten",
+      "pelvic_pain": "Bekkenpijn",
+      "ovulation_pain": "Eisprongpijn",
+      "heavy_bleeding": "Hevig bloedverlies",
+      "spotting": "Tussentijds bloedverlies",
+      "discharge": "Afscheiding",
+      "bloating": "Opgeblazen gevoel",
+      "digestion": "Darmklachten",
+      "nausea": "Misselijk",
+      "fatigue": "Moe",
+      "cravings": "Trek / eetbuien",
+      "acne": "Puistjes",
+      "dizziness": "Duizelig",
+      "hot_flashes": "Opvliegers / nachtzweten",
+      "mood_swings": "Stemmingswisselingen",
+      "irritability": "Prikkelbaar",
+      "anxiety": "Onrustig / angstig",
+      "low_mood": "Somber",
+      "insomnia": "Slecht geslapen",
+      "poor_focus": "Moeite met concentreren"
+    },
+    "custom": {
+      "title": "Iets anders",
+      "label": "Eigen klacht",
+      "placeholder": "Typ je klacht, bijv. kaakpijn",
+      "add": "Klacht toevoegen",
+      "remove": "{name} weghalen",
+      "tooLong": "Houd het kort: maximaal {n} tekens.",
+      "full": "Maximaal {n} eigen klachten per dag."
+    },
+    "status": {
+      "auto": "Wordt vanzelf bewaard",
+      "saving": "Bewaren…",
+      "saved": "Bewaard",
+      "error": "Niet bewaard.",
+      "retry": "Opnieuw proberen"
+    },
+    "today": {
+      "title": "Hoe voel je je vandaag?",
+      "hint": "Tik aan wat je merkt. Nog een keer tikken haalt het weg.",
+      "more": "Meer of eigen klacht",
+      "sheetTitle": "Klachten vandaag",
+      "sheetTitleN": "Klachten vandaag ({n})"
+    },
+    "calendar": {
+      "title": "Klachten",
+      "add": "Klachten toevoegen",
+      "edit": "Klachten aanpassen",
+      "sheetTitle": "Klachten, {date}",
+      "count": "{n} klacht | {n} klachten"
     }
   }
 }

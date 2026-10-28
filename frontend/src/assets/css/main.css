@@ -233,6 +233,17 @@
         outline-offset: -1.5px;
     }
 
+    /* ROLE: tap-to-toggle choice (symptoms); aria-pressed carries the state */
+    .toggle-chip {
+        @apply inline-flex items-center gap-1.5 rounded-full border text-[0.9375rem] font-medium leading-tight text-left text-ink bg-surface border-line-strong;
+        min-height: 2.5rem; padding: .375rem .875rem;
+        transition: background-color .15s, border-color .15s, color .15s;
+    }
+    .toggle-chip[aria-pressed="true"] { background: var(--color-period-soft); border-color: var(--color-period); color: var(--color-period-ink); font-weight: 600; }
+    .toggle-chip:active { transform: scale(.97); }
+    .toggle-chip:disabled { opacity: .5; }
+    @media (hover: hover) { .toggle-chip:not(:disabled):hover { border-color: var(--color-period); } }
+
     /* buttons: no scale-on-hover (glitchy on touch); hover only where hover exists */
     .btn {
         @apply inline-flex items-center justify-center font-semibold py-3 px-7 rounded-full text-base transition duration-200 ease-out select-none;

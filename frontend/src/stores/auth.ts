@@ -11,6 +11,7 @@ import {
     PasswordChange
 } from '@/types';
 import { useReportsStore } from "@/stores/reports"; // Assuming this store exists
+import { useSymptomsStore } from '@/stores/symptoms';
 import UsersApi from "@/api/users";
 
 export const useAuthStore = defineStore<'auth', AuthState, AuthGetters, AuthActions>('auth', {
@@ -101,6 +102,7 @@ export const useAuthStore = defineStore<'auth', AuthState, AuthGetters, AuthActi
 
             const reportStore = useReportsStore();
             reportStore.$reset();
+            useSymptomsStore().reset();
 
             localStorage.removeItem('token');
             localStorage.removeItem('refreshToken');

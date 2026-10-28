@@ -7,7 +7,7 @@ import BottomSheet from '@/components/BottomSheet.vue';
 import DateField from '@/components/DateField.vue';
 import { useReportsStore } from '@/stores/reports';
 import Skeleton from '@/components/Skeleton.vue';
-import { dateCheckApi, eventsApi, apiMessage, localToday, type DateCheck, type PlanEvent } from '@/api/plan';
+import { dateCheckApi, eventsApi, apiMessage, localToday, type CheckStatus, type DateCheck, type PlanEvent } from '@/api/plan';
 import { formatRange, formatDay, formatBetween } from '@/utils/formatDate';
 import { useToast } from '@/composables/useToast';
 
@@ -72,7 +72,9 @@ function onStart() {
 watch([start, end], () => { clearTimeout(timer); timer = window.setTimeout(check, 250); });
 
 // ---- the answer ----
-const ok = computed(() => result.value?.status === 'ok' && result.value.probability_any !== null);
+// 'learning' still comes with odds (leaning on population averages): show them, with the caveat
+const hasOdds = (s: CheckStatus) => s === 'ok' || s === 'learning';
+const ok = computed(() => !!result.value && hasOdds(result.value.status) && result.value.probability_any !== null);
 const pct = computed(() => {
   const p = result.value?.probability_any ?? 0;
   return p < 0.01 ? '<1' : p > 0.99 ? '>99' : String(Math.round(p * 100));
@@ -129,7 +131,7 @@ async function loadEvents() {
   try { events.value = (await eventsApi.list()).data; } catch { /* the page still works without the list */ }
   eventsLoading.value = false;
 }
-const evPct = (e: PlanEvent) => (e.status === 'ok' && e.probability_any !== null
+const evPct = (e: PlanEvent) => (hasOdds(e.status) && e.probability_any !== null
   ? (e.probability_any < 0.01 ? '<1%' : e.probability_any > 0.99 ? '>99%' : `${Math.round(e.probability_any * 100)}%`) : null);
 const evSub = (e: PlanEvent) => {
   if (e.is_past) return t('plan.events.past');

@@ -57,6 +57,14 @@ class DateCheckSchema(Schema):
     reason = fields.String(
         allow_none=True, metadata={"description": "Why there is no/weak forecast"}
     )
+    cycles_used = fields.Integer(
+        required=True,
+        metadata={"description": "Full cycles (start to next start) the forecast uses"},
+    )
+    cycles_needed = fields.Integer(
+        required=True,
+        metadata={"description": "Full cycles needed before status leaves learning"},
+    )
 
 
 class PlannedEventInputSchema(Schema):

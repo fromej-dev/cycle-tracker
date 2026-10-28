@@ -17,6 +17,8 @@ export interface DateCheck {
   includes_past_dates: boolean;
   reason: string | null;
   days: { date: string; p_bleeding: number }[];
+  cycles_used: number;
+  cycles_needed: number;
 }
 
 export interface PlanEvent {

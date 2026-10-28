@@ -577,7 +577,8 @@
     "peakNote": "Bleeding usually peaks a few days after it starts.",
     "startNote": "Your period most likely starts {range} ({pct}% sure).",
     "horizonGeneric": "The further ahead, the less certain any prediction is.",
-    "reasonGeneric": "This is an estimate from your logged cycles."
+    "reasonGeneric": "This is an estimate from your logged cycles.",
+    "learningLeft": "Log {count} more period to get odds based on your own cycle. Until then they lean on averages. | Log {count} more periods to get odds based on your own cycle. Until then they lean on averages."
   },
   "feed": {
     "title": "Add to your calendar",

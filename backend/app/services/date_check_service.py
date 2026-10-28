@@ -48,7 +48,7 @@ import datetime
 import weakref
 
 from app.models import Period
-from app.services.forecast_service import MIN_CYCLE, ForecastService
+from app.services.forecast_service import LEARNING_CYCLES, MIN_CYCLE, ForecastService
 from app.utils.exceptions import ValidationError
 
 MAX_RANGE_DAYS = 60
@@ -141,6 +141,8 @@ class DateCheckService:
             "includes_past_dates": start < today,
             "status": STATUS_OK,
             "reason": None,
+            "cycles_used": model.cycles_used,
+            "cycles_needed": LEARNING_CYCLES,
         }
         if model.last_start is None:
             return {
@@ -168,9 +170,11 @@ class DateCheckService:
         reason = None
         if model.label() == "learning":
             status = STATUS_LEARNING
+            to_go = LEARNING_CYCLES - model.cycles_used
             reason = (
                 f"Only {model.cycles_used} full cycle(s) logged so far, so these odds "
-                "lean on population averages and will sharpen as you log more."
+                "lean on population averages. Log "
+                f"{to_go} more period(s) for odds based on your own cycle."
             )
         note = None
         if profile_is_flat(model, start):

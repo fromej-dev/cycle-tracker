@@ -258,6 +258,8 @@ def test_learning_state_still_gives_odds(db, auth_client, test_user):
     assert r["confidence"] == "learning"
     assert 0.0 < r["probability_any"] <= 1.0
     assert r["reason"]
+    assert r["cycles_used"] == 1
+    assert r["cycles_needed"] == 3
 
 
 def test_openapi_documents_new_endpoints(client):

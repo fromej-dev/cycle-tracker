@@ -115,7 +115,12 @@ const mapped = (prefix: string, v: string | null) => {
   if (!isNl.value) return v;
   return prefix === 'plan.horizons' ? t('plan.horizonGeneric') : t('plan.reasonGeneric');
 };
-const reasonText = computed(() => mapped('plan.reasons', result.value?.reason ?? null));
+// while learning, say exactly how many more periods it takes (each one adds a full cycle)
+const reasonText = computed(() => {
+  const r = result.value;
+  if (r?.status === 'learning') return t('plan.learningLeft', Math.max(1, r.cycles_needed - r.cycles_used));
+  return mapped('plan.reasons', r?.reason ?? null);
+});
 const horizonText = computed(() => mapped('plan.horizons', result.value?.horizon_note ?? null));
 const confText = computed(() => (result.value?.confidence && te(`plan.confidence.${result.value.confidence}`) ? t(`plan.confidence.${result.value.confidence}`) : null));
 

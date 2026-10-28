@@ -577,7 +577,8 @@
     "peakNote": "De bloeding is meestal een paar dagen na het begin het sterkst.",
     "startNote": "Je menstruatie begint waarschijnlijk {range} ({pct}% zeker).",
     "horizonGeneric": "Hoe verder vooruit, hoe onzekerder elke voorspelling is.",
-    "reasonGeneric": "Dit is een schatting op basis van je geregistreerde cycli."
+    "reasonGeneric": "Dit is een schatting op basis van je geregistreerde cycli.",
+    "learningLeft": "Log nog {count} menstruatie voor kansen op basis van je eigen cyclus. Tot die tijd leunen ze op gemiddelden. | Log nog {count} menstruaties voor kansen op basis van je eigen cyclus. Tot die tijd leunen ze op gemiddelden."
   },
   "feed": {
     "title": "Aan je agenda toevoegen",

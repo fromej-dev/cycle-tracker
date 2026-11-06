@@ -10,6 +10,8 @@ import HistoryPage from '@/views/HistoryPage.vue';
 import { useAuthStore } from '@/stores/auth';
 import AccountPage from "@/views/AccountPage.vue";
 
+const AdminPage = () => import('@/views/AdminPage.vue');
+
 // Define routes with type annotations
 const routes: Array<RouteRecordRaw> = [
     {
@@ -58,6 +60,13 @@ const routes: Array<RouteRecordRaw> = [
         path: '/account',
         name: 'account',
         component: AccountPage,
+        meta: { requiresAuth: true } as { requiresAuth: boolean }
+    },
+    {
+        // The API decides who may see the numbers (403 for non-admins).
+        path: '/admin',
+        name: 'admin',
+        component: AdminPage,
         meta: { requiresAuth: true } as { requiresAuth: boolean }
     }
 ];

@@ -101,6 +101,12 @@
         </div>
       </section>
 
+      <section v-if="authStore.user?.is_admin" aria-labelledby="admin-heading" class="card p-6">
+        <h3 id="admin-heading" class="section-title mb-1">{{ $t('admin.openTitle') }}</h3>
+        <p class="text-ink-soft text-sm mb-4">{{ $t('admin.openDescription') }}</p>
+        <router-link :to="{ name: 'admin' }" class="btn btn-secondary">{{ $t('admin.openButton') }}</router-link>
+      </section>
+
       <CalendarFeedCard />
       <PartnerShareCard />
       <DoctorReportCard />

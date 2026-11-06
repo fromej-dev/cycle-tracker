@@ -791,5 +791,61 @@
       "sheetTitle": "Klachten, {date}",
       "count": "{n} klacht | {n} klachten"
     }
+  },
+  "admin": {
+    "title": "Beheer",
+    "intro": "Hoe de app gebruikt wordt, alleen in totalen. Niets hier is tot iemand te herleiden.",
+    "refresh": "Statistieken vernieuwen",
+    "forbidden": "Deze pagina is alleen voor beheerders.",
+    "failed": "De statistieken konden niet worden geladen. Probeer het zo opnieuw.",
+    "generated": "Bijgewerkt {at}",
+    "notEnough": "Nog te weinig mensen: zichtbaar zodra minstens {n} mensen meedoen.",
+    "privacyThreshold": "Om de privacy te beschermen blijven gezondheidscijfers verborgen tot minstens {n} mensen meedoen.",
+    "openTitle": "Beheer",
+    "openDescription": "Statistieken over de hele app, zonder persoonsgegevens.",
+    "openButton": "Statistieken openen",
+    "users": {
+      "title": "Mensen",
+      "total": "Accounts",
+      "active30": "Actief (30 dagen)",
+      "new7": "Nieuw deze week",
+      "new30": "Nieuw (30 dagen)",
+      "activeHint": "Actief betekent dat ze in de afgelopen 30 dagen een menstruatie, symptoom of plan hebben vastgelegd of gewijzigd."
+    },
+    "signups": {
+      "title": "Nieuwe accounts per maand",
+      "aria": "Staafdiagram van nieuwe accounts in de afgelopen 12 maanden"
+    },
+    "features": {
+      "title": "Gebruikte functies",
+      "hint": "Aandeel van alle accounts dat elke functie gebruikt.",
+      "periods": "Houdt menstruaties bij",
+      "symptoms": "Houdt symptomen bij",
+      "plannedEvents": "Plant afspraken",
+      "calendarFeed": "Agenda-feed",
+      "partnerShare": "Partnerpagina",
+      "homeAssistant": "Home Assistant",
+      "webhooks": "Webhooks"
+    },
+    "cycles": {
+      "title": "Cycli",
+      "cycleLength": "Mediane cycluslengte",
+      "periodLength": "Mediane menstruatieduur",
+      "days": "{n} dagen",
+      "basedOn": "Op basis van {n} mensen"
+    },
+    "symptoms": {
+      "title": "Meest gelogde symptomen",
+      "hint": "Aandeel van de {n} mensen die symptomen bijhouden. Alleen de vaste lijst; eigen notities tellen nooit mee."
+    },
+    "data": {
+      "title": "Opgeslagen gegevens",
+      "periods": "Menstruaties",
+      "ongoing": "Lopende menstruaties",
+      "symptomDays": "Dagen met symptomen",
+      "plannedEvents": "Geplande afspraken",
+      "webhooks": "Webhooks",
+      "webhooksValue": "{total} ({active} aan, {off} automatisch uitgezet)"
+    }
   }
 }

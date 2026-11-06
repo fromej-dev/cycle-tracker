@@ -22,6 +22,24 @@ insecure default and logs a warning.
 * Kubernetes: Helm chart in `cycle-tracker/` (set `secrets.existingSecret`)
 * Home Assistant integration: [docs/home-assistant.md](docs/home-assistant.md)
 
+## Admin statistics
+
+`/admin` shows app-wide totals: accounts, active and new people, sign-ups per
+month, which features are used, median cycle and period length, the most logged
+built-in symptoms and how much data is stored. It never shows names, e-mail
+addresses, individual records or free-text symptoms, and health figures stay
+hidden until at least 5 people contribute to them.
+
+Nobody is an admin by default. Grant or revoke access from a shell where the app
+runs (on Railway: `railway ssh`, then `cd /app`):
+
+```sh
+flask admin grant <username>
+flask admin revoke <username>
+```
+
+An admin sees an "Admin" card on the Account page.
+
 ## Forecast: known limits
 
 * All evaluation of the forecast is on synthetic data; no real-world accuracy

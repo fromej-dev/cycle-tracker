@@ -12,6 +12,7 @@ class UserSchema(Schema):
     username = fields.String(required=True, validate=validate.Length(min=3, max=80))
     email = fields.Email(required=True, validate=validate.Length(max=120))
     created_at = fields.DateTime(dump_only=True)
+    is_admin = fields.Boolean(dump_only=True)
 
 
 class UserUpdateSchema(Schema):

@@ -791,5 +791,61 @@
       "sheetTitle": "Symptoms, {date}",
       "count": "{n} symptom | {n} symptoms"
     }
+  },
+  "admin": {
+    "title": "Admin",
+    "intro": "How the app is used, in totals only. Nothing here identifies anyone.",
+    "refresh": "Refresh statistics",
+    "forbidden": "This page is only for admins.",
+    "failed": "Couldn't load the statistics. Try again in a moment.",
+    "generated": "Updated {at}",
+    "notEnough": "Not enough people yet: shown once at least {n} people contribute.",
+    "privacyThreshold": "To protect privacy, health figures stay hidden until at least {n} people contribute.",
+    "openTitle": "Admin",
+    "openDescription": "App-wide statistics, without personal information.",
+    "openButton": "Open statistics",
+    "users": {
+      "title": "People",
+      "total": "Accounts",
+      "active30": "Active (30 days)",
+      "new7": "New this week",
+      "new30": "New (30 days)",
+      "activeHint": "Active means they logged or changed a period, symptom or plan in the last 30 days."
+    },
+    "signups": {
+      "title": "New accounts per month",
+      "aria": "Bar chart of new accounts over the last 12 months"
+    },
+    "features": {
+      "title": "Features in use",
+      "hint": "Share of all accounts using each feature.",
+      "periods": "Logs periods",
+      "symptoms": "Logs symptoms",
+      "plannedEvents": "Plans events",
+      "calendarFeed": "Calendar feed",
+      "partnerShare": "Partner page",
+      "homeAssistant": "Home Assistant",
+      "webhooks": "Webhooks"
+    },
+    "cycles": {
+      "title": "Cycles",
+      "cycleLength": "Median cycle length",
+      "periodLength": "Median period length",
+      "days": "{n} days",
+      "basedOn": "Based on {n} people"
+    },
+    "symptoms": {
+      "title": "Most logged symptoms",
+      "hint": "Share of the {n} people who log symptoms. Only the built-in list; personal notes are never counted."
+    },
+    "data": {
+      "title": "Data stored",
+      "periods": "Periods",
+      "ongoing": "Periods still ongoing",
+      "symptomDays": "Days with symptoms",
+      "plannedEvents": "Planned events",
+      "webhooks": "Webhooks",
+      "webhooksValue": "{total} ({active} on, {off} switched off automatically)"
+    }
   }
 }

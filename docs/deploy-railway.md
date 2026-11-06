@@ -72,3 +72,5 @@ starts gunicorn on `0.0.0.0:$PORT`.
 * `FLASK_ENV=production` is the image default.
 * The healthcheck only confirms the process is serving; it does not touch the
   database.
+* To open the admin statistics page, give your account access once:
+  `railway ssh`, then `cd /app && flask admin grant <username>`.

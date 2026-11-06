@@ -1,5 +1,6 @@
 import os
 
+import click
 from apiflask import APIFlask
 from flask import jsonify, send_from_directory
 
@@ -133,6 +134,31 @@ def create_app(config_name: str | None = None) -> APIFlask:
         from app.services.webhook_service import WebhookService
 
         print(WebhookService.tick())
+
+    # Admin CLI: `flask admin grant <username>` / `flask admin revoke <username>`
+    @app.cli.group("admin")
+    def admin_cli():
+        """Who can open the admin statistics page."""
+
+    def _set_admin(username: str, value: bool) -> None:
+        user = User.find_by_username(username)
+        if user is None:
+            raise click.ClickException(f"No user named {username!r}.")
+        user.is_admin = value
+        db.session.commit()
+        click.echo(f"{user.username}: admin {'granted' if value else 'revoked'}.")
+
+    @admin_cli.command("grant")
+    @click.argument("username")
+    def admin_grant(username):
+        """Let USERNAME open the admin statistics page."""
+        _set_admin(username, True)
+
+    @admin_cli.command("revoke")
+    @click.argument("username")
+    def admin_revoke(username):
+        """Take admin access away from USERNAME."""
+        _set_admin(username, False)
 
     seconds = app.config.get("WEBHOOK_SCHEDULER_SECONDS", 0)
     if seconds and not app.config.get("TESTING"):

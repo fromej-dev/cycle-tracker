@@ -15,6 +15,10 @@ class User(BaseModel):
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)  # Increased length
+    # Can open the admin statistics page. Granted only via `flask admin grant`.
+    is_admin = db.Column(
+        db.Boolean, nullable=False, default=False, server_default=db.false()
+    )
 
     # Private calendar feed (ICS subscription). Only the SHA-256 hash of the secret
     # URL token is stored; the token itself is shown to the user once.

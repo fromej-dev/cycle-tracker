@@ -101,6 +101,41 @@ export interface User {
     username: string;
     email: string;
     created_at: string;
+    is_admin?: boolean;
+}
+
+// --- Admin statistics (aggregates only, no personal data) ---
+
+export interface AdminStats {
+    generated_at: string;
+    min_group_size: number;
+    users: { total: number; new_7d: number; new_30d: number; active_30d: number };
+    signups_by_month: { month: string; count: number }[];
+    data: {
+        periods: number;
+        ongoing_periods: number;
+        symptom_days: number;
+        planned_events: number;
+        webhooks: number;
+        webhooks_active: number;
+        webhooks_auto_disabled: number;
+    };
+    features: {
+        periods: number;
+        symptoms: number;
+        planned_events: number;
+        webhooks: number;
+        calendar_feed: number;
+        partner_share: number;
+        home_assistant: number;
+    };
+    cycles: {
+        users_with_cycles: number;
+        median_cycle_length: number | null;
+        users_with_period_length: number;
+        median_period_length: number | null;
+    };
+    symptoms: { users_logging: number; top: { key: string; users: number; share: number }[] };
 }
 
 export interface TokenPair {
